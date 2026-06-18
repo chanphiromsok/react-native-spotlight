@@ -8,7 +8,7 @@
     "androidCxxLibName": "spotlight"
   },
   "autolinking": {
-    "Spotlight": {
+    "SpotlightView": {
       "ios": {
         "language": "swift",
         "implementationClassName": "HybridSpotlight"
