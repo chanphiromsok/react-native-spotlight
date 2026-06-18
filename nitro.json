@@ -1,0 +1,23 @@
+{
+  "cxxNamespace": ["spotlight"],
+  "ios": {
+    "iosModuleName": "Spotlight"
+  },
+  "android": {
+    "androidNamespace": ["spotlight"],
+    "androidCxxLibName": "spotlight"
+  },
+  "autolinking": {
+    "Spotlight": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridSpotlight"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridSpotlight"
+      }
+    }
+  },
+  "ignorePaths": ["node_modules"]
+}

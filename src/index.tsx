@@ -1,0 +1,1 @@
+export { SpotlightView } from './SpotlightView';
