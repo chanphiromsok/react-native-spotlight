@@ -22,7 +22,7 @@ final class SpotlightOverlayView: UIView {
     backgroundColor = .clear
 
     overlayLayer.fillRule = .evenOdd
-    // ✅ No shouldRasterize — causes subpixel compositing shift on 3x screens
+    // No shouldRasterize — causes subpixel compositing shift on 3x screens
 
     ringLayer.fillColor   = UIColor.clear.cgColor
     ringLayer.strokeColor = UIColor.white.cgColor
@@ -35,22 +35,54 @@ final class SpotlightOverlayView: UIView {
   required init?(coder: NSCoder) { fatalError() }
 
   // MARK: - Layout
+
   override func layoutSubviews() {
     super.layoutSubviews()
-    overlayLayer.frame = bounds
-    ringLayer.frame    = bounds
+    updateLayerFrames()
     redraw(animated: false)
   }
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
     guard window != nil else { return }
-    overlayLayer.frame = bounds
-    ringLayer.frame    = bounds
+    updateLayerFrames()
+
+    // Pre-warm: commit empty paths so CALayer is already in the render
+    // tree when the first highlight fires — eliminates cold-start stutter
+    overlayLayer.path = UIBezierPath(rect: .zero).cgPath
+    ringLayer.path    = UIBezierPath(rect: .zero).cgPath
+
     redraw(animated: false)
   }
 
+  override func didMoveToSuperview() {
+    super.didMoveToSuperview()
+    setNeedsLayout()
+  }
+
+  // MARK: - Layer frames
+
+  private func updateLayerFrames() {
+    guard let window else {
+      overlayLayer.frame = bounds
+      ringLayer.frame    = bounds
+      return
+    }
+
+    // Use screen coordinate space instead of window.bounds.
+    // requireFullScreen: true can offset window.bounds from the true
+    // screen origin, making convert(from: window) return wrong coords.
+    // UIScreen.main.bounds is always (0, 0, screenW, screenH) — immune
+    // to window frame changes caused by requireFullScreen.
+    let screenBoundsInLocal = window.screen.coordinateSpace
+      .convert(UIScreen.main.bounds, to: self.coordinateSpace)
+
+    overlayLayer.frame = screenBoundsInLocal
+    ringLayer.frame    = screenBoundsInLocal
+  }
+
   // MARK: - Public API
+
   func setHighlight(_ rect: CGRect, animated: Bool, duration: TimeInterval = 0.25) {
     windowRect = rect
     redraw(animated: animated, duration: duration)
@@ -62,12 +94,18 @@ final class SpotlightOverlayView: UIView {
   }
 
   // MARK: - Coordinate conversion
-  private func localRect(from windowSpaceRect: CGRect) -> CGRect {
-    guard let window else { return windowSpaceRect }
-    return convert(windowSpaceRect, from: window)
+
+  // JS passes pageX/pageY from measureInWindow — screen-space points.
+  // Convert through screen coordinate space (not window) so requireFullScreen
+  // window offsets don't affect the hole position.
+  private func localRect(from screenSpaceRect: CGRect) -> CGRect {
+    guard let window else { return screenSpaceRect }
+    return window.screen.coordinateSpace
+      .convert(screenSpaceRect, to: self.coordinateSpace)
   }
 
   // MARK: - Drawing
+
   private func redraw(animated: Bool, duration: TimeInterval = 0.25) {
     let nextPath     = makeOverlayPath()
     let nextRingPath = makeRingPath()
@@ -79,7 +117,7 @@ final class SpotlightOverlayView: UIView {
     if animated {
       animate(
         layer: overlayLayer,
-        from: oldPath?.cgPath ?? overlayLayer.path,
+        from: oldPath?.cgPath ?? overlayLayer.presentation()?.path ?? overlayLayer.path,
         to: nextPath?.cgPath,
         duration: duration
       )
@@ -110,7 +148,8 @@ final class SpotlightOverlayView: UIView {
     guard !windowRect.isEmpty else { return nil }
     let path = UIBezierPath()
     path.usesEvenOddFillRule = true
-    path.append(UIBezierPath(rect: bounds))
+    // overlayLayer.bounds is screen-sized after updateLayerFrames
+    path.append(UIBezierPath(rect: overlayLayer.bounds))
     path.append(makeHolePath())
     return path
   }
@@ -127,7 +166,7 @@ final class SpotlightOverlayView: UIView {
     to: CGPath?,
     duration: TimeInterval
   ) {
-    // ✅ Use presentation layer for smooth mid-animation interruption
+    // Use presentation layer for smooth mid-animation interruption
     let actualFrom = layer.presentation()?.path ?? from
 
     layer.removeAnimation(forKey: "path")
@@ -141,7 +180,7 @@ final class SpotlightOverlayView: UIView {
     anim.duration              = duration
     anim.timingFunction        = CAMediaTimingFunction(name: .easeInEaseOut)
     anim.isRemovedOnCompletion = true
-    // ✅ No fillMode: .forwards — redundant with isRemovedOnCompletion = true
+    // No fillMode: .forwards — redundant with isRemovedOnCompletion = true
     //    and causes stale path to flash after animation ends
     layer.add(anim, forKey: "path")
   }
