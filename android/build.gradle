@@ -34,8 +34,6 @@ apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
 apply from: '../nitrogen/generated/android/spotlight+autolinking.gradle'
 
-apply plugin: "com.facebook.react"
-
 android {
   namespace "com.margelo.nitro.spotlight"
 

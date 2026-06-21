@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, type ViewStyle } from 'react-native';
 import { callback } from 'react-native-nitro-modules';
 import { SpotlightView, type SpotlightRef } from './SpotlightView';
 import type { SpotlightControls } from './useSpotlight';
@@ -42,8 +42,9 @@ export interface SpotlightComponentProps {
  * Drop-in overlay that highlights a measured view with a native cutout.
  * Pair with useSpotlight() to drive it.
  *
- * Renders a zero-size native anchor in the React tree.
- * The real overlay is mounted natively only while a highlight is active.
+ * On Android, renders the overlay in the current React screen so it participates
+ * in react-native-screens transitions. On iOS, renders a zero-size native anchor
+ * that owns a UIWindow overlay.
  *
  * @example
  * ```tsx
@@ -99,12 +100,24 @@ export function Spotlight({
       allowOverlayClick={allowOverlayClick}
       onBackdropPress={callback(onBackdropPress)}
       pointerEvents="none"
-      style={[styles.anchor, style]}
+      style={[
+        Platform.OS === 'android' ? styles.overlay : styles.anchor,
+        style,
+      ]}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 2147483647,
+    elevation: 10000,
+  },
   anchor: {
     position: 'absolute',
     width: 0,

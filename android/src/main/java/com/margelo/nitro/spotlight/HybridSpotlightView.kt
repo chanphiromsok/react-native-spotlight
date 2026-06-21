@@ -83,8 +83,13 @@ class HybridSpotlightView(
 
       override fun onViewDetachedFromWindow(v: View) {
         anchorAttached = false
-        removeOverlayFromDecor()
-        decorView = null
+        // If React Navigation/native-screens detaches this screen, remove the
+        // overlay immediately so it cannot remain on top of the previous/next
+        // screen. clear(0) also cancels any in-flight cutout animation.
+        spotlightView.clear(durationMs = 0L, onFinished = {
+          removeOverlayFromDecor()
+          decorView = null
+        })
       }
     })
   }
@@ -197,9 +202,11 @@ class HybridSpotlightView(
 
   override fun clear() {
     UiThreadUtil.runOnUiThread {
-      spotlightView.clear(
-        onFinished = { removeOverlayFromDecor() }
-      )
+      // Match iOS behavior: clear must remove the decor overlay immediately.
+      // This is important for navigation back gestures/buttons, otherwise the
+      // overlay can remain visible for the clear animation while the previous
+      // screen is already appearing.
+      spotlightView.clear(durationMs = 0L, onFinished = { removeOverlayFromDecor() })
     }
   }
 

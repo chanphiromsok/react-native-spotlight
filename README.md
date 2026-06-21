@@ -1,5 +1,7 @@
 # react-native-nitro-spotlight ✨
 
+> This is a vibe project — built for playful product tours, polished onboarding, and UI moments that feel alive.
+
 A tiny native spotlight overlay for React Native. Dim the whole screen, cut a buttery hole around any view, and build product tours that feel clean instead of clunky.
 
 Powered by [Nitro Modules](https://nitro.margelo.com/). Built for the New Architecture.
@@ -72,13 +74,161 @@ export function Example() {
 }
 ```
 
-That’s it. No measuring. No portal juggling. No chaos.
+That’s it. No measuring. No provider. No portal juggling. No chaos.
+
+## No provider needed
+
+`react-native-nitro-spotlight` is intentionally local-first:
+
+- call `useSpotlight()` inside the screen/component that owns the spotlight
+- pass the returned controls to `<Spotlight controls={spotlight} />`
+- call `spotlight.highlight(ref)` from any button or callback in that same scope
+
+You do **not** need to wrap your app in a provider.
+
+```tsx
+function Screen() {
+  const spotlight = useSpotlight();
+  const targetRef = useRef<ComponentRef<typeof View>>(null);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View ref={targetRef} />
+      <Button title="Show" onPress={() => spotlight.highlight(targetRef)} />
+      <Spotlight controls={spotlight} />
+    </View>
+  );
+}
+```
+
+For multi-step flows, use `useSpotlightTour()` instead of a provider. The tour hook keeps its own target map and exposes `getTargetProps(id)`.
+
+## Using with react-native-teleport 🌀
+
+You usually do **not** need Teleport. `Spotlight` mounts its native overlay for you.
+
+Use [`react-native-teleport`](https://github.com/kirillzyusko/react-native-teleport) when you want the Spotlight anchor to be pre-mounted offscreen and moved into a screen only when that screen provides a host. This follows Teleport’s [preloading heavy components](https://kirillzyusko.github.io/react-native-teleport/docs/recipes/preloading-heavy-components) pattern.
+
+Important: Spotlight itself has no provider. Teleport has its own `PortalProvider`; that provider is only for Teleport.
+
+Install Teleport:
+
+```sh
+npm install react-native-teleport
+```
+
+### 1. Preload the Spotlight anchor offscreen
+
+Create a small component that owns the spotlight controls and renders `<Spotlight />` inside a fixed `Portal hostName`. When no matching `PortalHost` exists, Teleport keeps the portal content in place — offscreen. When a screen mounts a matching host, the native view is moved there instead of recreated.
+
+```tsx
+import { createContext, useContext, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Portal } from 'react-native-teleport';
+import { Spotlight, useSpotlight, type SpotlightControls } from 'react-native-nitro-spotlight';
+
+const SpotlightContext = createContext<SpotlightControls | null>(null);
+
+export function useAppSpotlight() {
+  const spotlight = useContext(SpotlightContext);
+  if (!spotlight) {
+    throw new Error('useAppSpotlight must be used inside PreloadedSpotlight');
+  }
+  return spotlight;
+}
+
+export function PreloadedSpotlight({ children }: { children: ReactNode }) {
+  const spotlight = useSpotlight();
+
+  return (
+    <SpotlightContext.Provider value={spotlight}>
+      {children}
+
+      <View style={styles.offscreen}>
+        <Portal hostName="spotlight-overlay" style={styles.portal}>
+          <Spotlight
+            controls={spotlight}
+            dimOpacity={0.68}
+            borderRadius={22}
+            padding={8}
+          />
+        </Portal>
+      </View>
+    </SpotlightContext.Provider>
+  );
+}
+
+const styles = StyleSheet.create({
+  offscreen: {
+    position: 'absolute',
+    top: -9999,
+  },
+  portal: {
+    width: 1,
+    height: 1,
+  },
+});
+```
+
+### 2. Mount it once at the app root
+
+```tsx
+import { PortalProvider } from 'react-native-teleport';
+import { AppNavigator } from './AppNavigator';
+import { PreloadedSpotlight } from './PreloadedSpotlight';
+
+export function App() {
+  return (
+    <PortalProvider>
+      <PreloadedSpotlight>
+        <AppNavigator />
+      </PreloadedSpotlight>
+    </PortalProvider>
+  );
+}
+```
+
+### 3. Pull it into a screen with `PortalHost`
+
+```tsx
+import { useRef, type ComponentRef } from 'react';
+import { Button, StyleSheet, Text, View } from 'react-native';
+import { PortalHost } from 'react-native-teleport';
+import { useAppSpotlight } from './PreloadedSpotlight';
+
+export function DetailsScreen() {
+  const spotlight = useAppSpotlight();
+  const actionRef = useRef<ComponentRef<typeof View>>(null);
+
+  return (
+    <View style={{ flex: 1, padding: 24 }}>
+      <View ref={actionRef}>
+        <Text>Primary action</Text>
+      </View>
+
+      <Button
+        title="Show me"
+        onPress={() => spotlight.highlight(actionRef, { durationMs: 400 })}
+      />
+
+      <PortalHost name="spotlight-overlay" style={StyleSheet.absoluteFill} />
+    </View>
+  );
+}
+```
+
+How it works:
+
+- App startup: the Spotlight anchor mounts offscreen inside `Portal`.
+- Screen opens: `PortalHost name="spotlight-overlay"` mounts and pulls the same native view on-screen.
+- Screen closes: the host unmounts and the Spotlight anchor returns offscreen.
+- Target refs stay on the real views. `highlight(ref)` uses `measureInWindow`, so it still works after teleporting.
+
+If you do not need preloading/re-parenting behavior, render `<Spotlight controls={spotlight} />` directly in the screen instead.
 
 ## Product tour mode 🧭
 
 Use `useSpotlightTour()` when you want a real walkthrough.
-
-Want to teach users actual app abilities like “filter results” or “create your first project”? See [User skills with Spotlight](docs/user-skills.md).
 
 Each step has an `id`. Spread `getTargetProps(id)` on the matching view, then call `tour.start()`.
 
@@ -276,6 +426,21 @@ Only reach for `SpotlightView` if you need direct native ref control.
 import { SpotlightView } from 'react-native-nitro-spotlight';
 ```
 
+## Demo
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <strong>iOS</strong><br />
+      <video src="docs/assets/ios.mov" controls width="280"></video>
+    </td>
+    <td align="center">
+      <strong>Android</strong><br />
+      <video src="docs/assets/android.mov" controls width="280"></video>
+    </td>
+  </tr>
+</table>
+
 ## Example app
 
 Run the example to see multiple targets, animated transitions, backdrop behavior, and tour navigation.
@@ -287,9 +452,75 @@ yarn example start
 ## Tips
 
 - Render `<Spotlight />` once, near the root of the screen.
+- No provider is required; keep spotlight state local to the screen or flow.
 - Use `collapsable={false}` on custom target views if you wire refs manually.
 - Keep tour steps stable with `useMemo`.
 - Avoid triggering the same highlight repeatedly during an active animation; the hook already guards against duplicate same-target calls.
+
+### React Navigation back behavior
+
+If a tour is active and the user presses back, clear the tour before the screen is removed. With `@react-navigation/native-stack`, prefer `usePreventRemove` over a raw `beforeRemove` listener.
+
+```tsx
+import { useNavigation, usePreventRemove } from '@react-navigation/native';
+import { Spotlight, useSpotlightTour } from 'react-native-nitro-spotlight';
+
+function TourScreen() {
+  const navigation = useNavigation();
+  const tour = useSpotlightTour({ steps });
+
+  usePreventRemove(tour.isActive, ({ data }) => {
+    tour.stop();
+    navigation.dispatch(data.action);
+  });
+
+  return <Spotlight controls={tour.spotlight} />;
+}
+```
+
+For native-stack screens, also disable the Android/iOS back-button history menu for that route:
+
+```tsx
+<Stack.Screen
+  name="Tour"
+  component={TourScreen}
+  options={{ headerBackButtonMenuEnabled: false }}
+/>
+```
+
+This keeps the navigation workaround at the app/example level instead of coupling the library to React Navigation.
+
+## Agent Skills
+
+This repo includes Agent Skills so coding agents can learn this library faster and generate better code.
+
+### Add the skill to your app project
+
+From your app repo, install the user-facing skill:
+
+```sh
+npx skills add chanphiromsok/react-native-nitro-spotlight
+```
+
+Then ask your agent something like:
+
+```txt
+Use react-native-nitro-spotlight to add a 3-step onboarding tour to this screen.
+```
+
+The skill teaches agents:
+
+- how to use `Spotlight`, `useSpotlight`, and `useSpotlightTour`
+- when to use `react-native-teleport`
+- how `allowOverlayClick` and `onBackdropPress` behave
+- how to avoid duplicate animation hitches
+
+Included skills:
+
+- `react-native-nitro-spotlight` — for app developers using the library
+- `react-native-nitro-spotlight-maintainer` — for contributors working on this repo
+
+After the repo is public and installable, it can be discovered through the skills ecosystem / skills.sh.
 
 ## License
 
