@@ -1,11 +1,11 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import type { RefObject, ComponentRef } from 'react';
 import { View } from 'react-native';
 import type { SpotlightView } from './Spotlight.nitro';
 import type { SpotlightRef } from './SpotlightView';
 
 // Internal shared ref — <Spotlight> writes here, useSpotlight reads here.
-export type SpotlightInstance = RefObject<SpotlightRef | null>;
+type SpotlightInstance = RefObject<SpotlightRef | null>;
 
 export interface HighlightOptions {
   /** Animation duration in ms. Default 300. */
@@ -50,6 +50,19 @@ export interface SpotlightControls {
  */
 export function useSpotlight(): SpotlightControls {
   const _ref = useRef<SpotlightView | null>(null);
+  const animatingTargetRef = useRef<ComponentRef<typeof View> | null>(null);
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const finishAnimationGuard = useCallback(() => {
+    if (animationTimerRef.current) {
+      clearTimeout(animationTimerRef.current);
+    }
+
+    animationTimerRef.current = null;
+    animatingTargetRef.current = null;
+  }, []);
+
+  useEffect(() => finishAnimationGuard, [finishAnimationGuard]);
 
   const highlight = useCallback(
     (
@@ -57,26 +70,54 @@ export function useSpotlight(): SpotlightControls {
       { durationMs = 300 }: HighlightOptions = {}
     ) => {
       const instance = _ref.current;
-      if (!instance || !viewRef.current) return;
+      const target = viewRef.current;
+      if (!instance || !target) return;
 
-      viewRef.current.measureInWindow((x, y, width, height) => {
+      // Repeated taps on the same target can restart native path animations
+      // against the same destination. Ignore duplicates until this animation
+      // window completes, while still allowing taps on a different target.
+      if (animatingTargetRef.current === target) return;
+
+      finishAnimationGuard();
+      animatingTargetRef.current = target;
+
+      const animateToRect = (
+        x: number,
+        y: number,
+        width: number,
+        height: number
+      ) => {
+        instance.highlightAnimated(x, y, width, height, durationMs);
+        animationTimerRef.current = setTimeout(
+          finishAnimationGuard,
+          durationMs
+        );
+      };
+
+      target.measureInWindow((x, y, width, height) => {
         if (width === 0 && height === 0) {
           requestAnimationFrame(() => {
-            viewRef.current?.measureInWindow((x2, y2, w2, h2) => {
-              instance.highlightAnimated(x2, y2, w2, h2, durationMs);
-            });
+            const retryTarget = viewRef.current;
+            if (!retryTarget) {
+              finishAnimationGuard();
+              return;
+            }
+
+            retryTarget.measureInWindow(animateToRect);
           });
           return;
         }
-        instance.highlightAnimated(x, y, width, height, durationMs);
+
+        animateToRect(x, y, width, height);
       });
     },
-    []
+    [finishAnimationGuard]
   );
 
   const clear = useCallback(() => {
+    finishAnimationGuard();
     _ref.current?.clear();
-  }, []);
+  }, [finishAnimationGuard]);
 
-  return { _ref, highlight, clear };
+  return useMemo(() => ({ _ref, highlight, clear }), [clear, highlight]);
 }

@@ -20,11 +20,11 @@ export interface SpotlightProps extends HybridViewProps {
   borderWidth?: number;
   /** Color of the border around the cutout. */
   borderColor?: string;
-  /** Whether taps on the dimmed overlay should pass through to Pressables underneath. */
+  /** Whether backdrop taps should pass through to Pressables underneath. onBackdropPress still fires. */
   allowOverlayClick?: boolean;
   // Called after native measures the target — JS uses this to position tooltip
   onTargetLayout?: (rect: Rect) => void;
-  /** Called when the dimmed backdrop outside the cutout is tapped and allowOverlayClick is false. */
+  /** Called when the dimmed backdrop outside the cutout is tapped. */
   onBackdropPress?: () => void;
 }
 

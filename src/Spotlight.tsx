@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState, type RefObject } from 'react';
 import { StyleSheet, type ViewStyle } from 'react-native';
 import { callback } from 'react-native-nitro-modules';
 import { SpotlightView, type SpotlightRef } from './SpotlightView';
+import type { SpotlightControls } from './useSpotlight';
 
-interface SpotlightComponentProps {
-  /**
-   * The ref object returned by useSpotlight().
-   * This is the only required prop.
-   */
-  spotlightRef: RefObject<SpotlightRef | null>;
+export interface SpotlightComponentProps {
+  /** Controls returned by useSpotlight(). Preferred for app code. */
+  controls?: SpotlightControls;
+
+  /** @deprecated Use controls instead. */
+  spotlightRef?: RefObject<SpotlightRef | null>;
 
   /** Opacity of the dim overlay. Omitted values are not sent to native. */
   dimOpacity?: number;
@@ -25,10 +26,10 @@ interface SpotlightComponentProps {
   /** Color of the border around the cutout. Omitted values are not sent to native. */
   borderColor?: string;
 
-  /** Whether taps on the dimmed overlay should pass through to Pressables underneath. */
+  /** Whether backdrop taps should pass through to Pressables underneath. onBackdropPress still fires. */
   allowOverlayClick?: boolean;
 
-  /** Called when the dimmed backdrop outside the cutout is tapped and allowOverlayClick is false. */
+  /** Called when the dimmed backdrop outside the cutout is tapped. */
   onBackdropPress?: () => void;
 
   /** Additional style for the zero-size native anchor. Usually not needed. */
@@ -51,12 +52,13 @@ interface SpotlightComponentProps {
  * return (
  *   <View style={{ flex: 1 }}>
  *     <YourContent />
- *     <Spotlight spotlightRef={spotlight.spotlightRef} />
+ *     <Spotlight controls={spotlight} />
  *   </View>
  * )
  * ```
  */
 export function Spotlight({
+  controls,
   spotlightRef,
   dimOpacity,
   borderRadius,
@@ -75,13 +77,16 @@ export function Spotlight({
   }, []);
 
   useEffect(() => {
+    const targetRef = controls?._ref ?? spotlightRef;
+    if (!targetRef) return;
+
     if (spotlightInstance) {
-      spotlightRef.current = spotlightInstance;
+      targetRef.current = spotlightInstance;
     }
     return () => {
-      spotlightRef.current = null;
+      targetRef.current = null;
     };
-  }, [spotlightInstance, spotlightRef]);
+  }, [controls, spotlightInstance, spotlightRef]);
 
   return (
     <SpotlightView

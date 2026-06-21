@@ -1,16 +1,26 @@
-# react-native-nitro-spotlight
+# react-native-nitro-spotlight ✨
 
-Native spotlight overlay for React Native, powered by [Nitro Modules](https://nitro.margelo.com/). Highlight any measured React Native view with a dimmed native overlay, rounded cutout, and animated transitions.
+A tiny native spotlight overlay for React Native. Dim the whole screen, cut a buttery hole around any view, and build product tours that feel clean instead of clunky.
 
-## Features
+Powered by [Nitro Modules](https://nitro.margelo.com/). Built for the New Architecture.
 
-- Native Android and iOS overlay
-- Animated cutout movement
-- Configurable dim opacity, border radius, and padding
-- Configurable border width and border color around the spotlight cutout
-- Touch pass-through support with `allowOverlayClick`
-- Simple hook-based API
-- Lower-level `SpotlightView` escape hatch for advanced native wiring
+```tsx
+<Spotlight controls={spotlight} />
+```
+
+## Why it slaps
+
+- 🎯 Highlight any React Native view by ref
+- 🪄 Smooth native cutout animations
+- 🧭 Built-in multi-step onboarding tours
+- 👆 Touches inside the cutout pass through by default
+- 🌑 Custom dim opacity, radius, padding, border width, and border color
+- ⚡ Nitro-powered native view, no heavy JS overlay games
+
+## Requirements
+
+- React Native New Architecture
+- [`react-native-nitro-modules`](https://nitro.margelo.com/)
 
 ## Installation
 
@@ -18,17 +28,15 @@ Native spotlight overlay for React Native, powered by [Nitro Modules](https://ni
 npm install react-native-nitro-spotlight react-native-nitro-modules
 ```
 
-or:
+or
 
 ```sh
 yarn add react-native-nitro-spotlight react-native-nitro-modules
 ```
 
-`react-native-nitro-modules` is required because this library is implemented as a Nitro View.
+## Quick start
 
-## Basic usage
-
-Use `useSpotlight()` to create controls, attach a ref to the view you want to highlight, and render `<Spotlight />` once near the root of the screen.
+Create spotlight controls, attach a ref to the thing you want to highlight, then render `<Spotlight />` once near the root of the screen.
 
 ```tsx
 import { useRef, type ComponentRef } from 'react';
@@ -42,7 +50,7 @@ export function Example() {
   return (
     <View style={{ flex: 1, padding: 24 }}>
       <View ref={cardRef} style={{ padding: 20, borderRadius: 16 }}>
-        <Text>This view can be highlighted</Text>
+        <Text>Main character energy</Text>
       </View>
 
       <Button
@@ -53,7 +61,7 @@ export function Example() {
       <Button title="Clear" onPress={spotlight.clear} />
 
       <Spotlight
-        spotlightRef={spotlight._ref}
+        controls={spotlight}
         dimOpacity={0.68}
         borderRadius={22}
         padding={8}
@@ -64,84 +72,203 @@ export function Example() {
 }
 ```
 
+That’s it. No measuring. No portal juggling. No chaos.
+
+## Product tour mode 🧭
+
+Use `useSpotlightTour()` when you want a real walkthrough.
+
+Each step has an `id`. Spread `getTargetProps(id)` on the matching view, then call `tour.start()`.
+
+```tsx
+import { useMemo } from 'react';
+import { Button, Text, View } from 'react-native';
+import { Spotlight, useSpotlightTour } from 'react-native-nitro-spotlight';
+
+export function TutorialExample() {
+  const steps = useMemo(
+    () => [
+      {
+        id: 'filter',
+        title: 'Filter stuff',
+        description: 'Use this to find exactly what you need.',
+      },
+      {
+        id: 'item-1',
+        title: 'Open an item',
+        description: 'Tap a result to see the details.',
+      },
+      {
+        id: 'save',
+        title: 'Save it',
+        description: 'Keep your favorites for later.',
+      },
+    ],
+    []
+  );
+
+  const tour = useSpotlightTour({ steps });
+
+  return (
+    <View style={{ flex: 1, padding: 24 }}>
+      <View {...tour.getTargetProps('filter')}>
+        <Text>Filter</Text>
+      </View>
+
+      <View {...tour.getTargetProps('item-1')}>
+        <Text>Item 1</Text>
+      </View>
+
+      <View {...tour.getTargetProps('save')}>
+        <Text>Save</Text>
+      </View>
+
+      <Button title="Start tour" onPress={() => tour.start()} />
+
+      {tour.currentStep && (
+        <View style={{ marginTop: 'auto', padding: 16 }}>
+          <Text>{tour.currentStep.title}</Text>
+          <Text>{tour.currentStep.description}</Text>
+          <Button title="Next" onPress={tour.next} />
+        </View>
+      )}
+
+      <Spotlight
+        controls={tour.spotlight}
+        dimOpacity={0.68}
+        borderRadius={20}
+        padding={8}
+        borderColor="#FFFFFF"
+        onBackdropPress={tour.stop}
+      />
+    </View>
+  );
+}
+```
+
+Jump around whenever you need:
+
+```tsx
+tour.start('filter'); // start at a specific step
+tour.goTo('item-1'); // jump by id
+tour.goTo(2); // jump by index
+tour.previous(); // go back
+tour.stop(); // end the tour
+```
+
+> Keep your `steps` stable with `useMemo`, and start the tour only after target views have mounted.
+
 ## Touch behavior
 
-By default, the spotlight renders a white border/ring around the cutout and blocks touches on the dimmed backdrop outside the cutout. Touches inside the cutout pass through to the highlighted content.
+The default behavior is usually what you want:
 
-The `style` prop only applies to the zero-size native anchor view, not the native overlay drawing. Use `borderWidth`, `borderColor`, and `borderRadius` to style the cutout.
+- touches **inside** the cutout pass through to your app
+- touches on the dimmed backdrop are blocked
+- `onBackdropPress` fires when the backdrop is tapped
 
-Set `borderWidth={0}` to remove the cutout ring:
+`allowOverlayClick` means “let the user click buttons under the dim overlay.” It does **not** disable `onBackdropPress` — the callback still fires when the backdrop is tapped.
+
+Remove the ring:
 
 ```tsx
-<Spotlight
-  spotlightRef={spotlight._ref}
-  borderWidth={0}
-/>
+<Spotlight controls={spotlight} borderWidth={0} />
 ```
 
-Set `allowOverlayClick` when you want Pressables/buttons underneath the dim overlay to remain clickable:
+Let the dimmed backdrop pass touches through to buttons underneath:
 
 ```tsx
 <Spotlight
-  spotlightRef={spotlight._ref}
+  controls={spotlight}
   allowOverlayClick
+  onBackdropPress={() => console.log('Backdrop tapped, but touch still passes through')}
 />
 ```
 
-You can also listen for backdrop presses when the overlay is blocking the backdrop:
+Close on backdrop tap:
 
 ```tsx
-<Spotlight
-  spotlightRef={spotlight._ref}
-  onBackdropPress={() => spotlight.clear()}
-/>
+<Spotlight controls={spotlight} onBackdropPress={spotlight.clear} />
 ```
-
-> Note: `onBackdropPress` is for blocked backdrop taps. When `allowOverlayClick` is `true`, backdrop touches pass through to the underlying React Native views instead.
 
 ## API
 
 ### `useSpotlight()`
 
-Returns controls for driving the spotlight.
+```tsx
+const spotlight = useSpotlight();
+```
 
-| Field | Type | Description |
+| Field | Type | What it does |
 | --- | --- | --- |
-| `highlight` | `(viewRef, options?) => void` | Measures a React Native `View` ref and animates the spotlight cutout to it. |
-| `clear` | `() => void` | Hides the spotlight overlay. |
-| `_ref` | `RefObject` | Internal ref passed to `<Spotlight spotlightRef={spotlight._ref} />`. |
+| `highlight` | `(viewRef, options?) => void` | Measures a view ref and animates the cutout to it. |
+| `clear` | `() => void` | Hides the overlay. |
+| `_ref` | `RefObject` | Internal native ref. Use `<Spotlight controls={spotlight} />` instead of touching this directly. |
 
 ### `highlight(viewRef, options?)`
 
-```ts
-spotlight.highlight(viewRef, { durationMs: 300 });
-```
-
-Options:
-
-| Option | Type | Default | Description |
+| Option | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `durationMs` | `number` | `300` | Animation duration in milliseconds. |
 
 ### `<Spotlight />`
 
-Render one `Spotlight` component for the screen or flow you want to control.
+Render one per screen or flow.
 
-| Prop | Type | Description |
+| Prop | Type | What it does |
 | --- | --- | --- |
-| `spotlightRef` | `RefObject<SpotlightRef \| null>` | Ref from `useSpotlight()._ref`. |
-| `dimOpacity` | `number` | Opacity of the dim overlay. Omitted values are not sent to native. |
-| `borderRadius` | `number` | Border radius of the cutout hole. Omitted values are not sent to native. |
-| `padding` | `number` | Extra space around the highlighted view. Omitted values are not sent to native. |
-| `borderWidth` | `number` | Width of the border around the cutout. Set to `0` to remove it. Omitted values are not sent to native. |
-| `borderColor` | `string` | Color of the border around the cutout. Supports hex colors such as `'#FFFFFF'`. Omitted values are not sent to native. |
-| `allowOverlayClick` | `boolean` | Allows touches on the dim overlay to pass through to underlying Pressables/buttons. Omitted values are not sent to native. |
-| `onBackdropPress` | `() => void` | Called when the blocked dim backdrop is tapped. |
-| `style` | `ViewStyle` | Additional style for the zero-size native anchor. This does not style the native overlay drawing. |
+| `controls` | `SpotlightControls` | Controls from `useSpotlight()` or `tour.spotlight`. |
+| `dimOpacity` | `number` | Opacity of the dim overlay. |
+| `borderRadius` | `number` | Radius of the cutout. |
+| `padding` | `number` | Extra space around the highlighted view. |
+| `borderWidth` | `number` | Width of the cutout ring. Use `0` to hide it. |
+| `borderColor` | `string` | Ring color. Hex strings like `"#FFFFFF"` are supported. |
+| `allowOverlayClick` | `boolean` | Lets backdrop touches pass through to views/buttons underneath. `onBackdropPress` still fires. |
+| `onBackdropPress` | `() => void` | Called when the backdrop outside the cutout is tapped. |
+| `style` | `ViewStyle` | Style for the zero-size native anchor. Usually not needed. |
+| `spotlightRef` | `RefObject<SpotlightRef \| null>` | Deprecated escape hatch. Prefer `controls`. |
 
-## Advanced: `SpotlightView`
+### `useSpotlightTour({ steps })`
 
-Most apps should use `Spotlight` with `useSpotlight()`. For custom native ref wiring or direct method calls, the lower-level `SpotlightView` is exported as an escape hatch.
+```tsx
+const tour = useSpotlightTour({ steps });
+```
+
+| Field | Type | What it does |
+| --- | --- | --- |
+| `spotlight` | `SpotlightControls` | Pass this to `<Spotlight controls={tour.spotlight} />`. |
+| `steps` | `SpotlightTourStep[]` | Your tour config. |
+| `currentStep` | `SpotlightTourStep \| null` | Active step, or `null` when idle. |
+| `currentIndex` | `number` | Active step index, or `-1` when idle. |
+| `isActive` | `boolean` | Whether the tour is currently active. |
+| `getTargetProps` | `(id: string) => { ref, collapsable: false }` | Spread on the target view for that step. |
+| `start` | `(idOrIndex?: string \| number) => void` | Start the tour. Defaults to the first step. |
+| `goTo` | `(idOrIndex: string \| number) => void` | Jump to a step. |
+| `next` | `() => void` | Move forward. Stops at the end. |
+| `previous` | `() => void` | Move back one step. |
+| `stop` | `() => void` | Clear the spotlight and end the tour. |
+
+Step shape:
+
+```ts
+type SpotlightTourStep = {
+  id: string;
+  title?: string;
+  description?: string;
+  durationMs?: number;
+};
+```
+
+### `SpotlightView`
+
+Low-level native view export for custom wiring.
+
+Most apps should use:
+
+```tsx
+<Spotlight controls={spotlight} />
+```
+
+Only reach for `SpotlightView` if you need direct native ref control.
 
 ```tsx
 import { SpotlightView } from 'react-native-nitro-spotlight';
@@ -149,24 +276,19 @@ import { SpotlightView } from 'react-native-nitro-spotlight';
 
 ## Example app
 
-The example app in [`example/src/App.tsx`](example/src/App.tsx) demonstrates highlighting multiple views, animated transitions, clearing the overlay, and enabling `allowOverlayClick`.
-
-Run the example from the repository root:
+Run the example to see multiple targets, animated transitions, backdrop behavior, and tour navigation.
 
 ```sh
 yarn example start
 ```
 
-## Contributing
+## Tips
 
-- [Development workflow](CONTRIBUTING.md#development-workflow)
-- [Sending a pull request](CONTRIBUTING.md#sending-a-pull-request)
-- [Code of conduct](CODE_OF_CONDUCT.md)
+- Render `<Spotlight />` once, near the root of the screen.
+- Use `collapsable={false}` on custom target views if you wire refs manually.
+- Keep tour steps stable with `useMemo`.
+- Avoid triggering the same highlight repeatedly during an active animation; the hook already guards against duplicate same-target calls.
 
 ## License
 
 MIT
-
----
-
-Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)

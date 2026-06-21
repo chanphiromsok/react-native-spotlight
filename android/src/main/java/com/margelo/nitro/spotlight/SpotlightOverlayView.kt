@@ -156,10 +156,16 @@ internal class SpotlightOverlayView(
       return
     }
 
+    val nextWindowRectDp = RectF(xDp, yDp, xDp + widthDp, yDp + heightDp)
+
+    if (animated && activeAnimator?.isRunning == true && windowRectDp.approximatelyEquals(nextWindowRectDp)) {
+      return
+    }
+
     // React Native measureInWindow returns DIP coordinates relative to the
     // visible app window. Store the original JS values; convert only when we
     // know this overlay's current screen position.
-    windowRectDp.set(xDp, yDp, xDp + widthDp, yDp + heightDp)
+    windowRectDp.set(nextWindowRectDp)
 
     // Guard: if not laid out yet, onLayout will apply windowRectDp.
     if (width == 0 || height == 0) return
@@ -178,6 +184,10 @@ internal class SpotlightOverlayView(
   }
 
   fun clear(durationMs: Long = 200L, onFinished: (() -> Unit)? = null) {
+    if (windowRectDp.isEmpty && activeAnimator?.isRunning == true) {
+      return
+    }
+
     windowRectDp.setEmpty()
 
     if (durationMs <= 0L || currentLocalPx.isEmpty) {
@@ -261,10 +271,17 @@ internal class SpotlightOverlayView(
 
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
-        blockingTouch = !allowOverlayClick && !isTouchInsideHole(event.x.toInt(), event.y.toInt())
+        val isBackdropTouch = !isTouchInsideHole(event.x.toInt(), event.y.toInt())
+
+        if (allowOverlayClick && isBackdropTouch) {
+          onBackdropPress?.invoke()
+        }
+
+        blockingTouch = !allowOverlayClick && isBackdropTouch
         // Return false for hole touches, and for all touches when allowOverlayClick
         // is true, so the decor-view continues its normal child hit-test and
-        // delivers the gesture to RN underneath.
+        // delivers the gesture to RN underneath. onBackdropPress still fires for
+        // backdrop touches even in pass-through mode.
         blockingTouch
       }
       MotionEvent.ACTION_UP -> {
@@ -426,6 +443,12 @@ internal class SpotlightOverlayView(
     activeAnimator?.cancel()
     activeAnimator = null
   }
+
+  private fun RectF.approximatelyEquals(other: RectF, tolerance: Float = 0.5f): Boolean =
+    kotlin.math.abs(left - other.left) <= tolerance &&
+      kotlin.math.abs(top - other.top) <= tolerance &&
+      kotlin.math.abs(right - other.right) <= tolerance &&
+      kotlin.math.abs(bottom - other.bottom) <= tolerance
 
   private fun lerp(from: Float, to: Float, progress: Float): Float =
     from + (to - from) * progress
