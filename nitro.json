@@ -17,6 +17,16 @@
         "language": "kotlin",
         "implementationClassName": "HybridSpotlightView"
       }
+    },
+    "SpotlightWindowOverlayView": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridSpotlightWindowOverlayView"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridSpotlightWindowOverlayView"
+      }
     }
   },
   "ignorePaths": ["node_modules"]

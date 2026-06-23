@@ -3,6 +3,7 @@ export type RootStackParamList = {
   Manual: undefined;
   Tour: undefined;
   Touch: undefined;
+  TooltipOverlay: undefined;
   Lifecycle: undefined;
   Teleport: undefined;
 };

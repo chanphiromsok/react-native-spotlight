@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
-import { Platform, StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { callback } from 'react-native-nitro-modules';
 import { SpotlightView, type SpotlightRef } from './SpotlightView';
 import type { SpotlightControls } from './useSpotlight';
@@ -29,6 +29,12 @@ export interface SpotlightComponentProps {
   /** Whether backdrop taps should pass through to Pressables underneath. onBackdropPress still fires. */
   allowOverlayClick?: boolean;
 
+  /**
+   * iOS only: attach overlay to UIWindow so it covers native headers.
+   * Defaults to true. Set false when RN siblings/tooltips must render above it.
+   */
+  useWindowOverlay?: boolean;
+
   /** Called when the dimmed backdrop outside the cutout is tapped. */
   onBackdropPress?: () => void;
 
@@ -42,9 +48,8 @@ export interface SpotlightComponentProps {
  * Drop-in overlay that highlights a measured view with a native cutout.
  * Pair with useSpotlight() to drive it.
  *
- * On Android, renders the overlay in the current React screen so it participates
- * in react-native-screens transitions. On iOS, renders a zero-size native anchor
- * that owns a UIWindow overlay.
+ * Renders the native overlay in the current React screen so React Native
+ * siblings declared after it (for example tooltips) can draw above it.
  *
  * @example
  * ```tsx
@@ -67,6 +72,7 @@ export function Spotlight({
   borderWidth,
   borderColor,
   allowOverlayClick,
+  // useWindowOverlay — no longer forwarded to native; SpotlightWindow always manages the overlay
   onBackdropPress,
   style,
 }: SpotlightComponentProps) {
@@ -85,6 +91,7 @@ export function Spotlight({
       targetRef.current = spotlightInstance;
     }
     return () => {
+      targetRef.current?.clear();
       targetRef.current = null;
     };
   }, [controls, spotlightInstance, spotlightRef]);
@@ -100,10 +107,7 @@ export function Spotlight({
       allowOverlayClick={allowOverlayClick}
       onBackdropPress={callback(onBackdropPress)}
       pointerEvents="none"
-      style={[
-        Platform.OS === 'android' ? styles.overlay : styles.anchor,
-        style,
-      ]}
+      style={[styles.overlay, style]}
     />
   );
 }
@@ -117,11 +121,5 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 2147483647,
     elevation: 10000,
-  },
-  anchor: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    opacity: 0,
   },
 });

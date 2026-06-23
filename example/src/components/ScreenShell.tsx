@@ -6,10 +6,12 @@ export function ScreenShell({
   title,
   copy,
   children,
+  overlay,
 }: {
   title: string;
   copy: string;
   children: ReactNode;
+  overlay?: ReactNode;
 }) {
   return (
     <View style={styles.screen}>
@@ -20,6 +22,7 @@ export function ScreenShell({
         </View>
         {children}
       </View>
+      {overlay}
     </View>
   );
 }

@@ -1,7 +1,7 @@
 // Primary API — this is all most consumers need
 export { Spotlight } from './Spotlight';
+export { SpotlightWindowOverlay } from './SpotlightWindowOverlay';
 export { useSpotlight } from './useSpotlight';
-export type { SpotlightControls, HighlightOptions } from './useSpotlight';
 export { useSpotlightTour } from './useSpotlightTour';
 export type {
   SpotlightTourControls,
@@ -16,3 +16,12 @@ export type {
   SpotlightView as SpotlightViewType,
   Rect,
 } from './Spotlight.nitro';
+
+// src/index.ts — add alongside existing exports:
+export {
+  SpotlightTooltipHost,
+  useSpotlightTooltip,
+  computeTooltipFrame,
+} from './SpotlightTooltipHost';
+export type { TooltipPlacement } from './SpotlightTooltipHost';
+export type { SpotlightControls, TooltipFrame } from './useSpotlight';

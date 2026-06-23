@@ -63,6 +63,7 @@ class HybridSpotlightView(
   private var borderWidthValue: Double? = null
   private var borderColorValue: String? = null
   private var allowOverlayClickValue: Boolean? = null
+  private var useWindowOverlayValue: Boolean? = null
 
   // -------------------------------------------------------------------------
   // Nitro / Fabric entry-point
@@ -144,6 +145,13 @@ class HybridSpotlightView(
       if (allowOverlayClickValue == value) return
       allowOverlayClickValue = value
       UiThreadUtil.runOnUiThread { spotlightView.allowOverlayClick = value ?: DEFAULT_ALLOW_OVERLAY_CLICK }
+    }
+
+  // iOS-only prop. Android already attaches the native overlay to decorView.
+  override var useWindowOverlay: Boolean?
+    get() = useWindowOverlayValue
+    set(value) {
+      useWindowOverlayValue = value
     }
 
   override var onTargetLayout: ((Rect) -> Unit)? = null

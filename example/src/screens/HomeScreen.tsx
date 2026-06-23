@@ -29,6 +29,12 @@ const SCENARIOS: Array<{
     copy: 'Test allowOverlayClick and backdrop press.',
   },
   {
+    name: 'TooltipOverlay',
+    title: 'Tooltip overlay layering',
+    icon: '💬',
+    copy: 'Reproduce tooltip vs native overlay z-order.',
+  },
+  {
     name: 'Lifecycle',
     title: 'Unmount cleanup',
     icon: '🧼',
