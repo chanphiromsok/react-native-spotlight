@@ -20,12 +20,6 @@ export interface SpotlightControls {
   _onTargetLayout: (rect: Rect) => void;
 
   /**
-   * @internal — written by <SpotlightTooltip> so the native iOS backdrop
-   * can call the tooltip's onBackdropPress via <Spotlight>.
-   */
-  _backdropPressRef: { current: (() => void) | undefined };
-
-  /**
    * Highlight a view by passing its ref.
    *
    * @example
@@ -62,7 +56,6 @@ export interface SpotlightControls {
  */
 export function useSpotlight(): SpotlightControls {
   const _ref = useRef<SpotlightView | null>(null);
-  const _backdropPressRef = useRef<(() => void) | undefined>(undefined);
   const animatingTargetRef = useRef<ComponentRef<typeof View> | null>(null);
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
@@ -139,7 +132,7 @@ export function useSpotlight(): SpotlightControls {
   }, [finishAnimationGuard]);
 
   return useMemo(
-    () => ({ _ref, _onTargetLayout, _backdropPressRef, highlight, clear, targetRect }),
+    () => ({ _ref, _onTargetLayout, highlight, clear, targetRect }),
     [clear, highlight, _onTargetLayout, targetRect]
   );
 }

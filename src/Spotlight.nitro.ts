@@ -40,16 +40,6 @@ export interface SpotlightMethods extends HybridViewMethods {
   ): void;
 
   clear(): void;
-
-  /**
-   * Punch a second transparent hole in the dim overlay at the given
-   * window-space rect. Used by SpotlightTooltip so the tooltip content
-   * appears at full brightness without a Modal.
-   */
-  setTooltipRect(x: number, y: number, width: number, height: number): void;
-
-  /** Remove the tooltip hole. Called when the tooltip unmounts or clears. */
-  clearTooltipRect(): void;
 }
 
 export type SpotlightView = HybridView<SpotlightProps, SpotlightMethods>;

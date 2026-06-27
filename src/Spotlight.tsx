@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { Platform, StyleSheet, type ViewStyle } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { callback } from 'react-native-nitro-modules';
 import type { Rect } from './Spotlight.nitro';
 import { SpotlightView, type SpotlightRef } from './SpotlightView';
@@ -40,19 +40,26 @@ export interface SpotlightComponentProps {
    */
   onTargetLayout?: (rect: Rect) => void;
 
-  /** Additional style for the zero-size native anchor. Usually not needed. */
+  /**
+   * Content rendered above the dim overlay (e.g. SpotlightTooltip).
+   * Because the native dim layer is a CAShapeLayer sublayer and React children
+   * are UIView subviews, children are composited on top automatically.
+   */
+  children?: ReactNode;
+
+  /** Additional style for the overlay. Usually not needed. */
   style?: ViewStyle;
 }
 
 /**
  * Spotlight
  *
- * Drop-in overlay that highlights a measured view with a native cutout.
+ * Full-screen overlay that highlights a measured view with a native cutout.
  * Pair with useSpotlight() to drive it.
  *
- * On Android, renders the overlay in the current React screen so it participates
- * in react-native-screens transitions. On iOS, renders a zero-size native anchor
- * that owns a UIWindow overlay.
+ * Place children (e.g. SpotlightTooltip) inside to render them above the dim
+ * layer without any extra z-index or hole-punching — native UIView subviews
+ * always composite above CAShapeLayer sublayers.
  *
  * @example
  * ```tsx
@@ -61,7 +68,11 @@ export interface SpotlightComponentProps {
  * return (
  *   <View style={{ flex: 1 }}>
  *     <YourContent />
- *     <Spotlight controls={spotlight} />
+ *     <Spotlight controls={spotlight} onBackdropPress={spotlight.clear}>
+ *       <SpotlightTooltip controls={spotlight}>
+ *         <Text>Here's a tip!</Text>
+ *       </SpotlightTooltip>
+ *     </Spotlight>
  *   </View>
  * )
  * ```
@@ -77,12 +88,13 @@ export function Spotlight({
   allowOverlayClick,
   onBackdropPress,
   onTargetLayout,
+  children,
   style,
 }: SpotlightComponentProps) {
   const [spotlightInstance, setSpotlightInstance] =
     useState<SpotlightRef | null>(null);
 
-  // Stable refs so callback() wrappers below don't change identity on every render.
+  // Stable refs so callback() wrappers below never change identity on re-render.
   const onTargetLayoutRef = useRef(onTargetLayout);
   const onBackdropPressRef = useRef(onBackdropPress);
   const controlsRef = useRef(controls);
@@ -101,18 +113,13 @@ export function Spotlight({
     onTargetLayoutRef.current?.(rect);
   }, []);
 
-  // Merges the Spotlight-level onBackdropPress prop with any handler registered
-  // by <SpotlightTooltip> via controls._backdropPressRef, so iOS only needs one
-  // native callback and the tooltip's handler fires automatically.
   const handleBackdropPress = useCallback(() => {
-    controlsRef.current?._backdropPressRef?.current?.();
     onBackdropPressRef.current?.();
   }, []);
 
   useEffect(() => {
     const targetRef = controls?._ref ?? spotlightRef;
     if (!targetRef) return;
-
     if (spotlightInstance) {
       targetRef.current = spotlightInstance;
     }
@@ -132,12 +139,11 @@ export function Spotlight({
       allowOverlayClick={allowOverlayClick}
       onBackdropPress={callback(handleBackdropPress)}
       onTargetLayout={callback(handleTargetLayout)}
-      pointerEvents="none"
-      style={[
-        Platform.OS === 'android' ? styles.overlay : styles.anchor,
-        style,
-      ]}
-    />
+      pointerEvents="box-none"
+      style={[styles.overlay, style]}
+    >
+      {children}
+    </SpotlightView>
   );
 }
 
@@ -150,11 +156,5 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 2147483647,
     elevation: 10000,
-  },
-  anchor: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    opacity: 0,
   },
 });
