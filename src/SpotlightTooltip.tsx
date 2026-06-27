@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -30,8 +29,11 @@ export interface SpotlightTooltipProps {
   gap?: number;
 
   /**
-   * Called when the user taps outside the tooltip (on the dim backdrop).
-   * Wire this to spotlight.clear() or tour.stop() to dismiss.
+   * Called when the user taps the dim backdrop.
+   *
+   * On Android this is handled by an in-tree Pressable.
+   * On iOS the native overlay intercepts backdrop taps — pass the same
+   * callback to <Spotlight onBackdropPress={…}> for iOS support.
    */
   onBackdropPress?: () => void;
 
@@ -42,9 +44,17 @@ export interface SpotlightTooltipProps {
 /**
  * SpotlightTooltip
  *
- * Renders tooltip content ABOVE the dim overlay on iOS by using a Modal,
- * which is presented in a separate UIViewController layer sitting on top of
- * the UIWindow where the spotlight overlay lives.
+ * Renders tooltip content that appears fully undimmed over the spotlight overlay.
+ *
+ * iOS — two-cutout architecture:
+ *   The tooltip is a normal React view. After layout, it calls setTooltipRect()
+ *   so SpotlightView punches a second transparent hole in the native dim layer
+ *   at the tooltip's position. The tooltip starts invisible and is shown only
+ *   after the hole is confirmed, preventing any flash.
+ *
+ * Android — elevation:
+ *   The React-tree overlay uses elevation 10 000; the tooltip uses 10 001 so
+ *   it renders above it without any hole-punching.
  *
  * Visible only when controls.targetRect is non-null (i.e. a highlight is active).
  *
@@ -55,7 +65,7 @@ export interface SpotlightTooltipProps {
  * return (
  *   <>
  *     <YourContent />
- *     <Spotlight controls={spotlight} dimOpacity={0.68} />
+ *     <Spotlight controls={spotlight} dimOpacity={0.68} onBackdropPress={spotlight.clear} />
  *     <SpotlightTooltip controls={spotlight} onBackdropPress={spotlight.clear}>
  *       <Text>Here's a tip!</Text>
  *       <Button title="Got it" onPress={spotlight.clear} />
@@ -74,6 +84,49 @@ export function SpotlightTooltip({
 }: SpotlightTooltipProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { targetRect } = controls;
+  const tooltipRef = useRef<View>(null);
+  const [visible, setVisible] = useState(false);
+
+  const measureAndPunch = useCallback(() => {
+    const node = tooltipRef.current;
+    const instance = controls._ref.current;
+    if (!node || !instance) return;
+
+    node.measureInWindow((x, y, width, height) => {
+      if (width === 0 && height === 0) return;
+      if (Platform.OS === 'ios') {
+        instance.setTooltipRect(x, y, width, height);
+      }
+      setVisible(true);
+    });
+  }, [controls._ref]);
+
+  // Hide and re-measure whenever the highlighted target changes.
+  useEffect(() => {
+    if (!targetRect) {
+      setVisible(false);
+      if (Platform.OS === 'ios') {
+        controls._ref.current?.clearTooltipRect();
+      }
+      return;
+    }
+
+    setVisible(false);
+    // Wait one frame so React commits the tooltip's new position to native
+    // before we call measureInWindow. onLayout is also wired as a secondary
+    // trigger for the initial render case.
+    const handle = requestAnimationFrame(measureAndPunch);
+    return () => cancelAnimationFrame(handle);
+  }, [targetRect, measureAndPunch, controls._ref]);
+
+  // Clear the native hole on unmount.
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'ios') {
+        controls._ref.current?.clearTooltipRect();
+      }
+    };
+  }, [controls._ref]);
 
   if (!targetRect) return null;
 
@@ -87,20 +140,29 @@ export function SpotlightTooltip({
   );
 
   return (
-    <Modal
-      transparent
-      animationType="none"
-      visible
-      statusBarTranslucent={Platform.OS === 'android'}
-    >
-      {/* Full-screen backdrop — tap fires onBackdropPress */}
-      <Pressable style={styles.backdrop} onPress={onBackdropPress}>
-        {/* Tooltip box — tap is consumed here, does not bubble to backdrop */}
-        <View style={[styles.tooltip, tooltipStyle, style]}>
-          <Pressable onPress={() => {}}>{children}</Pressable>
-        </View>
-      </Pressable>
-    </Modal>
+    <View style={styles.container} pointerEvents="box-none">
+      {/* Android only: full-screen Pressable catches backdrop taps.
+          On iOS the native SpotlightView overlay handles them instead. */}
+      {Platform.OS === 'android' && (
+        <Pressable
+          style={StyleSheet.absoluteFillObject}
+          onPress={onBackdropPress}
+        />
+      )}
+      <View
+        ref={tooltipRef}
+        onLayout={measureAndPunch}
+        style={[
+          styles.tooltip,
+          tooltipStyle,
+          style,
+          !visible && styles.hidden,
+        ]}
+        pointerEvents="box-none"
+      >
+        <Pressable onPress={() => {}}>{children}</Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -126,7 +188,6 @@ function computeTooltipStyle(
   gap: number
 ): ViewStyle {
   const maxWidth = screenWidth - TOOLTIP_HORIZONTAL_MARGIN * 2;
-  // Center tooltip on the cutout, clamped to screen edges.
   const left = Math.max(
     TOOLTIP_HORIZONTAL_MARGIN,
     Math.min(
@@ -136,26 +197,22 @@ function computeTooltipStyle(
   );
 
   if (placement === 'below') {
-    return {
-      top: rect.y + rect.height + gap,
-      left,
-      maxWidth,
-    };
+    return { top: rect.y + rect.height + gap, left, maxWidth };
   }
 
-  // 'above': position by bottom edge so the tooltip grows upward.
-  return {
-    bottom: screenHeight - rect.y + gap,
-    left,
-    maxWidth,
-  };
+  return { bottom: screenHeight - rect.y + gap, left, maxWidth };
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2147483646,
+    elevation: 10001,
   },
   tooltip: {
     position: 'absolute',
+  },
+  hidden: {
+    opacity: 0,
   },
 });

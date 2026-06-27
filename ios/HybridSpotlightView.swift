@@ -169,8 +169,22 @@ class HybridSpotlightView: HybridSpotlightViewSpec {
     }
   }
 
-  func measureViewByTag(reactTag: Double) -> Rect {
-    return Rect(x: 0, y: 0, width: 0, height: 0)
+  func setTooltipRect(
+    x: Double,
+    y: Double,
+    width: Double,
+    height: Double
+  ) throws {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      spotlightView.setTooltipRect(CGRect(x: x, y: y, width: width, height: height))
+    }
+  }
+
+  func clearTooltipRect() throws {
+    DispatchQueue.main.async { [weak self] in
+      self?.spotlightView.clearTooltipRect()
+    }
   }
 
   // MARK: - Overlay add/remove

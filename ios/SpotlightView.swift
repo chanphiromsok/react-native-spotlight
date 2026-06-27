@@ -51,10 +51,11 @@ public final class SpotlightView: UIView {
   
   private let spotlightMask = CAShapeLayer()
   private let ringLayer = CAShapeLayer()
-  
-  /// Rect coming from JS.
-  /// Usually from `measureInWindow`.
+
+  /// Rect of the primary cutout (highlighted target). Window-space coords from measureInWindow.
   private var sourceRect = CGRect.zero
+  /// Rect of the tooltip hole. Set by JS after SpotlightTooltip measures itself.
+  private var tooltipRect = CGRect.zero
   private var currentOverlayPath: UIBezierPath?
   private var currentHolePath: UIBezierPath?
   private var resolvedBorderColor = UIColor.white
@@ -138,9 +139,22 @@ public final class SpotlightView: UIView {
     if sourceRect.isEmpty, hasRunningPathAnimation {
       return
     }
-    
+
     sourceRect = .zero
+    tooltipRect = .zero
     redraw(animated: animated, duration: duration)
+  }
+
+  func setTooltipRect(_ rect: CGRect) {
+    guard rect != tooltipRect else { return }
+    tooltipRect = rect
+    redraw(animated: false)
+  }
+
+  func clearTooltipRect() {
+    guard !tooltipRect.isEmpty else { return }
+    tooltipRect = .zero
+    redraw(animated: false)
   }
   
   // MARK: - Touch Handling
@@ -173,7 +187,9 @@ public final class SpotlightView: UIView {
   
   
   private func isBackdropPoint(_ point: CGPoint) -> Bool {
-    !(currentHolePath?.contains(point) ?? false)
+    if currentHolePath?.contains(point) ?? false { return false }
+    if !tooltipRect.isEmpty, localRect(from: tooltipRect).contains(point) { return false }
+    return true
   }
   
   // MARK: - Coordinate Conversion
@@ -244,14 +260,19 @@ public final class SpotlightView: UIView {
   
   private func makeOverlayPath(holePath: UIBezierPath?) -> UIBezierPath? {
     guard let holePath else { return nil }
-    
+
     let path = UIBezierPath()
     path.usesEvenOddFillRule = true
-    
+
     // Layer frame == UIView bounds, so path must also use bounds.
     path.append(UIBezierPath(rect: bounds))
     path.append(holePath)
-    
+
+    // Punch a second hole where the tooltip sits so it appears undimmed.
+    if !tooltipRect.isEmpty {
+      path.append(UIBezierPath(rect: localRect(from: tooltipRect)))
+    }
+
     return path
   }
   
