@@ -1,7 +1,7 @@
-import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import type { RefObject, ComponentRef } from 'react';
 import { View } from 'react-native';
-import type { SpotlightView } from './Spotlight.nitro';
+import type { Rect, SpotlightView } from './Spotlight.nitro';
 import type { SpotlightRef } from './SpotlightView';
 
 // Internal shared ref — <Spotlight> writes here, useSpotlight reads here.
@@ -15,6 +15,9 @@ export interface HighlightOptions {
 export interface SpotlightControls {
   /** @internal — consumed by <Spotlight controls={...}>, not for direct use */
   _ref: SpotlightInstance;
+
+  /** @internal — consumed by <Spotlight controls={...}> to pipe onTargetLayout back here */
+  _onTargetLayout: (rect: Rect) => void;
 
   /**
    * Highlight a view by passing its ref.
@@ -30,6 +33,9 @@ export interface SpotlightControls {
 
   /** Clear the spotlight. */
   clear(): void;
+
+  /** Current cutout rect in window coordinates. null when the spotlight is hidden. */
+  targetRect: Rect | null;
 }
 
 /**
@@ -52,6 +58,7 @@ export function useSpotlight(): SpotlightControls {
   const _ref = useRef<SpotlightView | null>(null);
   const animatingTargetRef = useRef<ComponentRef<typeof View> | null>(null);
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [targetRect, setTargetRect] = useState<Rect | null>(null);
 
   const finishAnimationGuard = useCallback(() => {
     if (animationTimerRef.current) {
@@ -63,6 +70,10 @@ export function useSpotlight(): SpotlightControls {
   }, []);
 
   useEffect(() => finishAnimationGuard, [finishAnimationGuard]);
+
+  const _onTargetLayout = useCallback((rect: Rect) => {
+    setTargetRect(rect);
+  }, []);
 
   const highlight = useCallback(
     (
@@ -116,8 +127,12 @@ export function useSpotlight(): SpotlightControls {
 
   const clear = useCallback(() => {
     finishAnimationGuard();
+    setTargetRect(null);
     _ref.current?.clear();
   }, [finishAnimationGuard]);
 
-  return useMemo(() => ({ _ref, highlight, clear }), [clear, highlight]);
+  return useMemo(
+    () => ({ _ref, _onTargetLayout, highlight, clear, targetRect }),
+    [clear, highlight, _onTargetLayout, targetRect]
+  );
 }
