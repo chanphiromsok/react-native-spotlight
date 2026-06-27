@@ -42,8 +42,8 @@ export interface SpotlightComponentProps {
 
   /**
    * Content rendered above the dim overlay (e.g. SpotlightTooltip).
-   * Because the native dim layer is a CAShapeLayer sublayer and React children
-   * are UIView subviews, children are composited on top automatically.
+   * Children are siblings of SpotlightView in the React tree, so they
+   * composite above the dim layer at higher z-order automatically.
    */
   children?: ReactNode;
 
@@ -58,8 +58,9 @@ export interface SpotlightComponentProps {
  * Pair with useSpotlight() to drive it.
  *
  * Place children (e.g. SpotlightTooltip) inside to render them above the dim
- * layer without any extra z-index or hole-punching — native UIView subviews
- * always composite above CAShapeLayer sublayers.
+ * layer without any extra z-index or hole-punching. Works as a regular React
+ * Native view — can be wrapped in any portal library (e.g. react-native-teleport)
+ * to render from anywhere in the component tree.
  *
  * @example
  * ```tsx
