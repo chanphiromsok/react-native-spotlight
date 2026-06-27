@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, StyleSheet, type ViewStyle } from 'react-native';
 import { callback } from 'react-native-nitro-modules';
+import type { Rect } from './Spotlight.nitro';
 import { SpotlightView, type SpotlightRef } from './SpotlightView';
 import type { SpotlightControls } from './useSpotlight';
 
@@ -31,6 +32,13 @@ export interface SpotlightComponentProps {
 
   /** Called when the dimmed backdrop outside the cutout is tapped. */
   onBackdropPress?: () => void;
+
+  /**
+   * Called after native highlights a target.
+   * Provides the cutout rect in window coordinates — use this to position a tooltip.
+   * When using controls, prefer reading controls.targetRect instead.
+   */
+  onTargetLayout?: (rect: Rect) => void;
 
   /** Additional style for the zero-size native anchor. Usually not needed. */
   style?: ViewStyle;
@@ -68,13 +76,27 @@ export function Spotlight({
   borderColor,
   allowOverlayClick,
   onBackdropPress,
+  onTargetLayout,
   style,
 }: SpotlightComponentProps) {
   const [spotlightInstance, setSpotlightInstance] =
     useState<SpotlightRef | null>(null);
 
+  // Stable refs so the callback() wrapper below doesn't change identity on every render.
+  const onTargetLayoutRef = useRef(onTargetLayout);
+  const controlsRef = useRef(controls);
+  useEffect(() => {
+    onTargetLayoutRef.current = onTargetLayout;
+    controlsRef.current = controls;
+  });
+
   const hybridRef = useCallback((ref: SpotlightRef | null) => {
     setSpotlightInstance(ref);
+  }, []);
+
+  const handleTargetLayout = useCallback((rect: Rect) => {
+    controlsRef.current?._onTargetLayout(rect);
+    onTargetLayoutRef.current?.(rect);
   }, []);
 
   useEffect(() => {
@@ -99,6 +121,7 @@ export function Spotlight({
       borderColor={borderColor}
       allowOverlayClick={allowOverlayClick}
       onBackdropPress={callback(onBackdropPress)}
+      onTargetLayout={callback(handleTargetLayout)}
       pointerEvents="none"
       style={[
         Platform.OS === 'android' ? styles.overlay : styles.anchor,

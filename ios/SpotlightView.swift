@@ -63,21 +63,16 @@ public final class SpotlightView: UIView {
   
   override init(frame: CGRect) {
     super.init(frame: frame)
-    
-    //    isUserInteractionEnabled = true
-    //    backgroundColor = .clear
-    
+
     spotlightMask.fillRule = .evenOdd
     spotlightMask.fillColor = UIColor.black.withAlphaComponent(dimOpacity).cgColor
     layer.addSublayer(spotlightMask)
-    
-    if(borderWidth > 0){
-      ringLayer.fillColor = UIColor.clear.cgColor
-      ringLayer.strokeColor = resolvedBorderColor.cgColor
-      ringLayer.lineWidth = borderWidth
-      layer.addSublayer(ringLayer)
-    }
-    
+
+    ringLayer.fillColor = UIColor.clear.cgColor
+    ringLayer.strokeColor = resolvedBorderColor.cgColor
+    ringLayer.lineWidth = borderWidth
+    ringLayer.isHidden = borderWidth <= 0
+    layer.addSublayer(ringLayer)
   }
   
   required init?(coder: NSCoder) {
@@ -94,11 +89,8 @@ public final class SpotlightView: UIView {
     
     // Pre-warm layers to avoid first render stutter.
     spotlightMask.path = UIBezierPath(rect: .zero).cgPath
-    
-    if(borderWidth > 0){
-      ringLayer.path = UIBezierPath(rect: .zero).cgPath
-    }
-    
+    ringLayer.path = UIBezierPath(rect: .zero).cgPath
+
     redraw(animated: false)
   }
   
@@ -117,11 +109,8 @@ public final class SpotlightView: UIView {
     // Keep layer coordinates same as this UIView.
     // Do not use UIScreen.main.bounds here.
     spotlightMask.frame = bounds
-    
-    if(borderWidth > 0){
-      ringLayer.frame = bounds
-    }
-    
+    ringLayer.frame = bounds
+
     CATransaction.commit()
   }
   
@@ -202,21 +191,19 @@ public final class SpotlightView: UIView {
     duration: TimeInterval = 0.25
   ) {
     spotlightMask.fillColor = UIColor.black.withAlphaComponent(dimOpacity).cgColor
-    
-    if(borderWidth>0){
-      ringLayer.strokeColor = resolvedBorderColor.cgColor
-      ringLayer.lineWidth = borderWidth
-      ringLayer.isHidden = borderWidth <= 0
-    }
-    
+
+    ringLayer.isHidden = borderWidth <= 0
+    ringLayer.strokeColor = resolvedBorderColor.cgColor
+    ringLayer.lineWidth = borderWidth
+
     let nextHolePath = makeHolePath()
     let nextOverlayPath = makeOverlayPath(holePath: nextHolePath)
     let nextRingPath = makeRingPath(holePath: nextHolePath)
-    
+
     let oldOverlayPath = currentOverlayPath
     currentOverlayPath = nextOverlayPath
     currentHolePath = nextHolePath
-    
+
     if animated {
       animate(
         layer: spotlightMask,
@@ -224,23 +211,18 @@ public final class SpotlightView: UIView {
         to: nextOverlayPath?.cgPath,
         duration: duration
       )
-      
-      if(borderWidth > 0){
-        animate(
-          layer: ringLayer,
-          from: ringLayer.presentation()?.path ?? ringLayer.path,
-          to: nextRingPath?.cgPath,
-          duration: duration
-        )
-      }
+      animate(
+        layer: ringLayer,
+        from: ringLayer.presentation()?.path ?? ringLayer.path,
+        to: nextRingPath?.cgPath,
+        duration: duration
+      )
     } else {
       spotlightMask.removeAnimation(forKey: "path")
       spotlightMask.path = nextOverlayPath?.cgPath
-      
-      if(borderWidth>0){
-        ringLayer.removeAnimation(forKey: "path")
-        ringLayer.path = nextRingPath?.cgPath
-      }
+
+      ringLayer.removeAnimation(forKey: "path")
+      ringLayer.path = nextRingPath?.cgPath
     }
   }
   
