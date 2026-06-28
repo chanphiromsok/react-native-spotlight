@@ -226,8 +226,13 @@ public final class SpotlightView: UIView {
     guard let holePath else { return nil }
     let path = UIBezierPath()
     path.usesEvenOddFillRule = true
-    // Layer frame == UIView bounds, so path must also use bounds.
-    path.append(UIBezierPath(rect: bounds))
+    // Use the window rect converted to local space rather than self.bounds.
+    // If Fabric hasn't set our frame yet when highlight fires, bounds is zero —
+    // a zero outer rect makes the hole path the only filled region (inverted dim).
+    // The window rect is always larger than any card, so evenOdd always gives
+    // dim-everywhere-except-hole, regardless of layout timing.
+    let outerRect = window.map { convert($0.bounds, from: nil) } ?? bounds
+    path.append(UIBezierPath(rect: outerRect))
     path.append(holePath)
     return path
   }

@@ -5,4 +5,5 @@ export type RootStackParamList = {
   Touch: undefined;
   Lifecycle: undefined;
   Teleport: undefined;
+  FullWindow: undefined;
 };

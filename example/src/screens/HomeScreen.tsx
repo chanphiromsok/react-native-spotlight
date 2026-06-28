@@ -40,6 +40,12 @@ const SCENARIOS: Array<{
     icon: '🌀',
     copy: 'Preload offscreen and pull in with PortalHost.',
   },
+  {
+    name: 'FullWindow',
+    title: 'Full window overlay',
+    icon: '🪟',
+    copy: 'Dim the nav bar too with FullWindowOverlay from react-native-screens.',
+  },
 ];
 
 export function HomeScreen({
