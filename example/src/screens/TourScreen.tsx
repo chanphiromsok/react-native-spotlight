@@ -1,7 +1,11 @@
 import { useMemo } from 'react';
 import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { Text, View } from 'react-native';
-import { Spotlight, useSpotlightTour } from 'react-native-nitro-spotlight';
+import {
+  Spotlight,
+  SpotlightTooltip,
+  useSpotlightTour,
+} from 'react-native-nitro-spotlight';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
 import { TourTargets } from '../components/TourTargets';
@@ -44,29 +48,6 @@ export function TourScreen() {
     >
       <TourTargets tour={tour} />
 
-      {tour.currentStep && (
-        <View style={styles.tooltip}>
-          <Text style={styles.tooltipStep}>
-            {tour.currentIndex + 1} / {tour.steps.length}
-          </Text>
-          <Text style={styles.tooltipTitle}>{tour.currentStep.title}</Text>
-          <Text style={styles.tooltipCopy}>{tour.currentStep.description}</Text>
-          <View style={styles.tooltipActions}>
-            <SpotlightButton
-              label="Back"
-              variant="ghost"
-              onPress={tour.previous}
-            />
-            <SpotlightButton label="Next" onPress={tour.next} />
-            <SpotlightButton
-              label="Stop"
-              variant="secondary"
-              onPress={tour.stop}
-            />
-          </View>
-        </View>
-      )}
-
       <View style={styles.actions}>
         <SpotlightButton label="Start tour" onPress={() => tour.start()} />
         <SpotlightButton
@@ -80,7 +61,34 @@ export function TourScreen() {
         controls={tour.spotlight}
         {...spotlightProps}
         allowOverlayClick
-      />
+      >
+        {tour.currentStep && (
+          <SpotlightTooltip controls={tour.spotlight}>
+            <View style={styles.tooltip}>
+              <Text style={styles.tooltipStep}>
+                {tour.currentIndex + 1} / {tour.steps.length}
+              </Text>
+              <Text style={styles.tooltipTitle}>{tour.currentStep.title}</Text>
+              <Text style={styles.tooltipCopy}>
+                {tour.currentStep.description}
+              </Text>
+              <View style={styles.tooltipActions}>
+                <SpotlightButton
+                  label="Back"
+                  variant="ghost"
+                  onPress={tour.previous}
+                />
+                <SpotlightButton label="Next" onPress={tour.next} />
+                <SpotlightButton
+                  label="Stop"
+                  variant="secondary"
+                  onPress={tour.stop}
+                />
+              </View>
+            </View>
+          </SpotlightTooltip>
+        )}
+      </Spotlight>
     </ScreenShell>
   );
 }
