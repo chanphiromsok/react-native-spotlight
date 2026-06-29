@@ -23,6 +23,12 @@ const SCENARIOS: Array<{
     copy: 'Run next/back/stop with useSpotlightTour.',
   },
   {
+    name: 'CustomState',
+    title: 'Custom state',
+    icon: '🗃️',
+    copy: 'Drive a tour from useState, zustand, jotai, or any store.',
+  },
+  {
     name: 'Touch',
     title: 'Touch behavior',
     icon: '👆',

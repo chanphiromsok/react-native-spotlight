@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PortalHost, PortalProvider } from 'react-native-teleport';
 import type { RootStackParamList } from './navigation/types';
+import { CustomStateScreen } from './screens/CustomStateScreen';
 import { FullWindowScreen } from './screens/FullWindowScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LifecycleScreen } from './screens/LifecycleScreen';
@@ -39,6 +40,14 @@ export default function App() {
               name="Tour"
               component={TourScreen}
               options={{ headerBackButtonMenuEnabled: false }}
+            />
+            <Stack.Screen
+              name="CustomState"
+              component={CustomStateScreen}
+              options={{
+                title: 'Custom state',
+                headerBackButtonMenuEnabled: false,
+              }}
             />
             <Stack.Screen name="Touch" component={TouchScreen} />
             <Stack.Screen name="Lifecycle" component={LifecycleScreen} />
