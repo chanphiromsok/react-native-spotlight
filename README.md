@@ -346,6 +346,126 @@ Close on backdrop tap:
 <Spotlight controls={spotlight} onBackdropPress={spotlight.clear} />
 ```
 
+## Bring your own state
+
+`useSpotlightTour` manages step state internally. If you want to drive a tour from **zustand, jotai, redux, context, or any other store**, use `useSpotlightTargets` instead. It handles only the id → native View mapping; all step state lives wherever you put it.
+
+```tsx
+import { useEffect } from 'react';
+import { View, Button, Text } from 'react-native';
+import { Spotlight, useSpotlight, useSpotlightTargets } from 'react-native-nitro-spotlight';
+```
+
+### With zustand
+
+```tsx
+import { create } from 'zustand';
+
+const STEPS = ['intro', 'feature', 'done'] as const;
+type StepId = typeof STEPS[number];
+
+const useTourStore = create<{
+  step: StepId | null;
+  setStep: (step: StepId | null) => void;
+}>((set) => ({
+  step: null,
+  setStep: (step) => set({ step }),
+}));
+
+export function TourScreen() {
+  const spotlight = useSpotlight();
+  const targets = useSpotlightTargets(spotlight);
+  const { step, setStep } = useTourStore();
+
+  useEffect(() => {
+    if (step) targets.highlightById(step, { durationMs: 350 });
+    else spotlight.clear();
+  }, [step]);
+
+  return (
+    <View style={{ flex: 1, padding: 24 }}>
+      <View {...targets.getTargetProps('intro')}>
+        <Text>Intro</Text>
+      </View>
+      <View {...targets.getTargetProps('feature')}>
+        <Text>Feature</Text>
+      </View>
+      <View {...targets.getTargetProps('done')}>
+        <Text>Done</Text>
+      </View>
+
+      <Button title="Start" onPress={() => setStep('intro')} />
+
+      {step && (
+        <View style={{ marginTop: 'auto', padding: 16 }}>
+          <Text>Step: {step}</Text>
+          <Button
+            title="Next"
+            onPress={() => {
+              const i = STEPS.indexOf(step);
+              setStep(i + 1 < STEPS.length ? STEPS[i + 1] : null);
+            }}
+          />
+        </View>
+      )}
+
+      <Spotlight
+        controls={spotlight}
+        dimOpacity={0.68}
+        borderRadius={20}
+        padding={8}
+        onBackdropPress={() => setStep(null)}
+      />
+    </View>
+  );
+}
+```
+
+### With jotai
+
+```tsx
+import { atom, useAtom } from 'jotai';
+
+const stepAtom = atom<string | null>(null);
+
+export function TourScreen() {
+  const spotlight = useSpotlight();
+  const targets = useSpotlightTargets(spotlight);
+  const [step, setStep] = useAtom(stepAtom);
+
+  useEffect(() => {
+    if (step) targets.highlightById(step, { durationMs: 350 });
+    else spotlight.clear();
+  }, [step]);
+
+  // ... same JSX as above
+}
+```
+
+### With React context
+
+```tsx
+const TourContext = createContext<{
+  step: string | null;
+  setStep: (s: string | null) => void;
+} | null>(null);
+
+export function TourScreen() {
+  const spotlight = useSpotlight();
+  const targets = useSpotlightTargets(spotlight);
+  const { step, setStep } = useContext(TourContext)!;
+
+  useEffect(() => {
+    if (step) targets.highlightById(step, { durationMs: 350 });
+    else spotlight.clear();
+  }, [step]);
+
+  // ... same JSX as above
+}
+```
+
+The rule: `useSpotlight()` owns the native layer. `useSpotlightTargets(spotlight)` owns the id→ref map. Your store owns step state. Spread `getTargetProps(id)` on each target view, call `highlightById(id)` when your state changes.
+
 ## API
 
 ### `useSpotlight()`
@@ -456,6 +576,19 @@ function Example() {
 | `placement` | `'above' \| 'below' \| 'auto'` | `'auto'` | Where to place the tooltip relative to the cutout. `'auto'` picks whichever side has more space. |
 | `gap` | `number` | `12` | Gap in pixels between the cutout edge and the tooltip. |
 | `style` | `ViewStyle` | — | Style applied to the tooltip container. Use for background, border radius, shadow, etc. |
+
+### `useSpotlightTargets(spotlight)`
+
+```tsx
+const targets = useSpotlightTargets(spotlight);
+```
+
+The ref-registration half of `useSpotlightTour`, without any step state. Use this when you want to drive a tour from your own state management (zustand, jotai, redux, context, etc.).
+
+| Field | Type | What it does |
+| --- | --- | --- |
+| `getTargetProps` | `(id: string) => { ref, collapsable: false }` | Spread on the target view for that step. |
+| `highlightById` | `(id: string, options?) => void` | Highlight the registered view for a given id. No-op if the id is not yet registered. |
 
 ### `SpotlightView`
 

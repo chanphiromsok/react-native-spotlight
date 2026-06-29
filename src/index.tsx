@@ -8,12 +8,16 @@ export type {
   SpotlightTooltipProps,
   SpotlightTooltipPlacement,
 } from './SpotlightTooltip';
+export { useSpotlightTargets } from './useSpotlightTargets';
+export type {
+  SpotlightTargets,
+  SpotlightTargetProps,
+} from './useSpotlightTargets';
 export { useSpotlightTour } from './useSpotlightTour';
 export type {
   SpotlightTourControls,
   SpotlightTourOptions,
   SpotlightTourStep,
-  SpotlightTargetProps,
 } from './useSpotlightTour';
 
 // Escape hatch — for advanced use (custom hybridRef wiring, direct method calls)

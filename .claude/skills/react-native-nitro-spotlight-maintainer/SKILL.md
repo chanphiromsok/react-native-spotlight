@@ -19,6 +19,7 @@ Public JS/TS API:
 - `src/Spotlight.tsx`
 - `src/SpotlightTooltip.tsx`
 - `src/useSpotlight.ts`
+- `src/useSpotlightTargets.ts`
 - `src/useSpotlightTour.ts`
 - `src/SpotlightView.tsx`
 - `src/Spotlight.nitro.ts`

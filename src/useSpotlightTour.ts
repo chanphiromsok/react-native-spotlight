@@ -1,7 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import type { ComponentRef, RefCallback } from 'react';
-import { View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
 import { useSpotlight, type HighlightOptions } from './useSpotlight';
+import {
+  useSpotlightTargets,
+  type SpotlightTargetProps,
+} from './useSpotlightTargets';
+
+export type { SpotlightTargetProps };
 
 export interface SpotlightTourStep extends HighlightOptions {
   id: string;
@@ -11,11 +15,6 @@ export interface SpotlightTourStep extends HighlightOptions {
 
 export interface SpotlightTourOptions {
   steps: SpotlightTourStep[];
-}
-
-export interface SpotlightTargetProps {
-  ref: RefCallback<ComponentRef<typeof View>>;
-  collapsable: false;
 }
 
 export interface SpotlightTourControls {
@@ -36,9 +35,7 @@ export function useSpotlightTour({
   steps,
 }: SpotlightTourOptions): SpotlightTourControls {
   const spotlight = useSpotlight();
-  const targetsRef = useRef(
-    new Map<string, ComponentRef<typeof View> | null>()
-  );
+  const { getTargetProps, highlightById } = useSpotlightTargets(spotlight);
   const [currentIndex, setCurrentIndex] = useState(-1);
 
   const currentStep = currentIndex >= 0 ? (steps[currentIndex] ?? null) : null;
@@ -58,16 +55,13 @@ export function useSpotlightTour({
       const step = steps[nextIndex];
       if (!step) return;
 
-      const target = targetsRef.current.get(step.id);
-      if (!target) return;
-
       setCurrentIndex(nextIndex);
-      spotlight.highlight(
-        { current: target },
+      highlightById(
+        step.id,
         step.durationMs == null ? undefined : { durationMs: step.durationMs }
       );
     },
-    [resolveIndex, spotlight, steps]
+    [resolveIndex, highlightById, steps]
   );
 
   const start = useCallback(
@@ -98,16 +92,6 @@ export function useSpotlightTour({
     spotlight.clear();
     setCurrentIndex(-1);
   }, [spotlight]);
-
-  const getTargetProps = useCallback(
-    (id: string): SpotlightTargetProps => ({
-      collapsable: false,
-      ref: (target) => {
-        targetsRef.current.set(id, target);
-      },
-    }),
-    []
-  );
 
   return useMemo(
     () => ({

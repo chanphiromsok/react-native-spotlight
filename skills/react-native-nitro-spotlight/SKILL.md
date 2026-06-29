@@ -148,7 +148,7 @@ Notes:
 
 ## Build a product tour
 
-Use `useSpotlightTour({ steps })` for onboarding, coach marks, and multi-step walkthroughs.
+Use `useSpotlightTour({ steps })` for onboarding, coach marks, and multi-step walkthroughs. If the user wants to manage step state themselves (zustand, jotai, redux, context), use `useSpotlightTargets` instead — see the "Bring your own state" section below.
 
 Rules:
 
@@ -252,6 +252,63 @@ Key props:
 - `style` — applied to the tooltip container; use for background, border radius, shadow.
 
 For multi-step tours, use `<SpotlightTooltip controls={tour.spotlight} />`.
+
+## Bring your own state
+
+Use `useSpotlightTargets(spotlight)` when the user wants step state to live in their own store (zustand, jotai, redux, context, etc.) instead of inside the hook.
+
+It returns two things:
+- `getTargetProps(id)` — spread on each target view, same as `useSpotlightTour`
+- `highlightById(id, options?)` — call this when your state changes to trigger the native highlight
+
+The user is responsible for calling `spotlight.clear()` when the tour ends.
+
+```tsx
+import { useEffect } from 'react';
+import { Spotlight, useSpotlight, useSpotlightTargets } from 'react-native-nitro-spotlight';
+
+// zustand example — same pattern works for jotai, redux, context
+import { create } from 'zustand';
+
+const STEPS = ['intro', 'feature', 'done'] as const;
+type StepId = typeof STEPS[number];
+
+const useTourStore = create<{
+  step: StepId | null;
+  setStep: (step: StepId | null) => void;
+}>((set) => ({ step: null, setStep: (step) => set({ step }) }));
+
+export function TourScreen() {
+  const spotlight = useSpotlight();
+  const targets = useSpotlightTargets(spotlight);
+  const { step, setStep } = useTourStore();
+
+  useEffect(() => {
+    if (step) targets.highlightById(step, { durationMs: 350 });
+    else spotlight.clear();
+  }, [step]);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View {...targets.getTargetProps('intro')}><Text>Intro</Text></View>
+      <View {...targets.getTargetProps('feature')}><Text>Feature</Text></View>
+      <View {...targets.getTargetProps('done')}><Text>Done</Text></View>
+
+      <Button title="Start" onPress={() => setStep('intro')} />
+
+      <Spotlight
+        controls={spotlight}
+        dimOpacity={0.68}
+        borderRadius={20}
+        padding={8}
+        onBackdropPress={() => setStep(null)}
+      />
+    </View>
+  );
+}
+```
+
+`useSpotlightTour` uses `useSpotlightTargets` internally — switching between them is a one-line change.
 
 ## Touch behavior
 
