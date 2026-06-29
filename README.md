@@ -562,10 +562,7 @@ The skill teaches agents:
 - how `allowOverlayClick` and `onBackdropPress` behave
 - how to avoid duplicate animation hitches
 
-Included skills:
-
-- `react-native-nitro-spotlight` — for app developers using the library
-- `react-native-nitro-spotlight-maintainer` — for contributors working on this repo
+Contributors working on this repo get the maintainer skill automatically — it lives in `.claude/skills/` and loads when you open the repo in Claude Code. No install step needed.
 
 After the repo is public and installable, it can be discovered through the skills ecosystem / skills.sh.
 
