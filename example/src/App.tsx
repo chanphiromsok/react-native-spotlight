@@ -1,8 +1,9 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PortalProvider } from 'react-native-teleport';
+import { PortalHost, PortalProvider } from 'react-native-teleport';
 import type { RootStackParamList } from './navigation/types';
 import { FullWindowScreen } from './screens/FullWindowScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -45,7 +46,12 @@ export default function App() {
             <Stack.Screen name="FullWindow" component={FullWindowScreen} />
           </Stack.Navigator>
         </NavigationContainer>
+        <PortalHost name="spotlight-root" style={styles.host} />
       </PortalProvider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  host: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+});

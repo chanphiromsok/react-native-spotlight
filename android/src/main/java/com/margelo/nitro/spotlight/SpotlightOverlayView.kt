@@ -356,21 +356,29 @@ internal class SpotlightOverlayView(
 
     holePath.addRoundRect(cutRect, radius, radius, Path.Direction.CW)
 
-    // Use the window's visible frame in local coordinates rather than the view's
-    // own bounds (0..width, 0..height). Now that SpotlightOverlayView lives inside
-    // the React tree (below nav header/padding), windowDpToLocalPx can produce a
-    // hole whose top is slightly negative — padding around a card near the view's
-    // top edge extends above y=0. A zero-based outer rect then leaves that strip
-    // outside the outer path, so EVEN_ODD fills the hole instead of the background.
-    // Converting the window frame to local coords gives a rect that starts above y=0
-    // and is guaranteed to contain the hole, matching the iOS window-bounds fix.
+    // Use the physical screen bounds in local coordinates as the outer EVEN_ODD
+    // rect. This is equivalent to iOS's window.map { convert($0.bounds, from: nil) }.
+    //
+    // Using view bounds (0, 0, width, height) fails when the view is inside the
+    // React tree below the nav header — the hole's top (padded) can be negative,
+    // causing EVEN_ODD inversion.
+    //
+    // Using visibleWindowFrame fails when the view is at y=0 (root-level teleport) —
+    // visibleWindowFrame.top = statusBarHeight, so outerTop > 0 and the status bar
+    // strip is left outside the outer rect (not dimmed).
+    //
+    // Physical screen bounds converted to local space always contain the hole and
+    // correctly dim the full screen regardless of where the view is positioned.
     getLocationOnScreen(overlayOrigin)
-    getWindowVisibleDisplayFrame(visibleWindowFrame)
-    val outerLeft = (visibleWindowFrame.left - overlayOrigin[0]).toFloat()
-    val outerTop  = (visibleWindowFrame.top  - overlayOrigin[1]).toFloat()
-    val outerRight  = (visibleWindowFrame.right  - overlayOrigin[0]).toFloat()
-    val outerBottom = (visibleWindowFrame.bottom - overlayOrigin[1]).toFloat()
-    overlayPath.addRect(outerLeft, outerTop, outerRight, outerBottom, Path.Direction.CW)
+    val screenW = resources.displayMetrics.widthPixels.toFloat()
+    val screenH = resources.displayMetrics.heightPixels.toFloat()
+    overlayPath.addRect(
+      -overlayOrigin[0].toFloat(),
+      -overlayOrigin[1].toFloat(),
+      screenW - overlayOrigin[0],
+      screenH - overlayOrigin[1],
+      Path.Direction.CW,
+    )
     overlayPath.addPath(holePath)
 
     if (!allowOverlayClick) {

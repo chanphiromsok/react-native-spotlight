@@ -1,11 +1,11 @@
-import { useRef, useState, type ElementRef } from 'react';
+import { useRef, type ElementRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   Spotlight,
   SpotlightTooltip,
   useSpotlight,
 } from 'react-native-nitro-spotlight';
-import { Portal, PortalHost } from 'react-native-teleport';
+import { Portal } from 'react-native-teleport';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
 import { spotlightProps, styles } from '../theme/styles';
@@ -13,18 +13,18 @@ import { spotlightProps, styles } from '../theme/styles';
 export function TeleportScreen() {
   const spotlight = useSpotlight();
   const targetRef = useRef<ElementRef<typeof View>>(null);
-  const [hostMounted, setHostMounted] = useState(true);
 
   return (
     <ScreenShell
       title="react-native-teleport"
-      copy="Spotlight is pre-mounted offscreen in a Portal and pulled into this screen by PortalHost."
+      copy="Spotlight is pre-mounted offscreen in a Portal and rendered above the native header via a root-level PortalHost in App.tsx."
     >
       <View ref={targetRef} style={styles.card}>
         <Text style={styles.cardLabel}>Teleport</Text>
         <Text style={styles.cardTitle}>Re-parent the anchor</Text>
         <Text style={styles.cardCopy}>
-          Toggle the host to simulate screen mount/unmount.
+          The overlay and tooltip are portaled to a PortalHost that sits above
+          the navigation stack, so the dim covers the native header.
         </Text>
       </View>
 
@@ -33,18 +33,10 @@ export function TeleportScreen() {
           label="Highlight teleported"
           onPress={() => spotlight.highlight(targetRef, { durationMs: 420 })}
         />
-        <SpotlightButton
-          label={hostMounted ? 'Unmount PortalHost' : 'Mount PortalHost'}
-          variant="secondary"
-          onPress={() => setHostMounted((value) => !value)}
-        />
       </View>
 
       <View style={styles.offscreen}>
-        <Portal
-          hostName="spotlight-example-overlay"
-          style={styles.portalAnchor}
-        >
+        <Portal hostName="spotlight-root" style={styles.portalAnchor}>
           <Spotlight
             controls={spotlight}
             {...spotlightProps}
@@ -65,13 +57,6 @@ export function TeleportScreen() {
           </Spotlight>
         </Portal>
       </View>
-
-      {hostMounted && (
-        <PortalHost
-          name="spotlight-example-overlay"
-          style={styles.portalHost}
-        />
-      )}
     </ScreenShell>
   );
 }
