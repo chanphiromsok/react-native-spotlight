@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PortalProvider } from 'react-native-teleport';
 import type { RootStackParamList } from './navigation/types';
+import { FullWindowScreen } from './screens/FullWindowScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LifecycleScreen } from './screens/LifecycleScreen';
 import { ManualScreen } from './screens/ManualScreen';
@@ -41,6 +42,7 @@ export default function App() {
             <Stack.Screen name="Touch" component={TouchScreen} />
             <Stack.Screen name="Lifecycle" component={LifecycleScreen} />
             <Stack.Screen name="Teleport" component={TeleportScreen} />
+            <Stack.Screen name="FullWindow" component={FullWindowScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PortalProvider>

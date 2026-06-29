@@ -1,16 +1,38 @@
-import { useRef, type ElementRef } from 'react';
-import { View } from 'react-native';
-import { Spotlight, useSpotlight } from 'react-native-nitro-spotlight';
+import { useRef, useState, type ElementRef } from 'react';
+import { Text, View } from 'react-native';
+import {
+  Spotlight,
+  SpotlightTooltip,
+  useSpotlight,
+} from 'react-native-nitro-spotlight';
 import { DemoTargets } from '../components/DemoTargets';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
 import { spotlightProps, styles } from '../theme/styles';
+
+const TOOLTIP_COPY = {
+  intro: {
+    title: 'Intro card',
+    copy: 'Pass any measured ref to spotlight.highlight().',
+  },
+  feature: {
+    title: 'Feature card',
+    copy: 'The overlay animates smoothly between any two rects.',
+  },
+  clear: {
+    title: 'Clear card',
+    copy: 'Tap "Got it" or the backdrop to dismiss.',
+  },
+} as const;
+
+type TargetKey = keyof typeof TOOLTIP_COPY;
 
 export function ManualScreen() {
   const spotlight = useSpotlight();
   const introRef = useRef<ElementRef<typeof View>>(null);
   const featureRef = useRef<ElementRef<typeof View>>(null);
   const clearRef = useRef<ElementRef<typeof View>>(null);
+  const [activeKey, setActiveKey] = useState<TargetKey>('intro');
 
   return (
     <ScreenShell
@@ -27,15 +49,24 @@ export function ManualScreen() {
         <View style={styles.actionGrid}>
           <SpotlightButton
             label="Intro"
-            onPress={() => spotlight.highlight(introRef, { durationMs: 420 })}
+            onPress={() => {
+              setActiveKey('intro');
+              spotlight.highlight(introRef, { durationMs: 420 });
+            }}
           />
           <SpotlightButton
             label="Feature"
-            onPress={() => spotlight.highlight(featureRef, { durationMs: 420 })}
+            onPress={() => {
+              setActiveKey('feature');
+              spotlight.highlight(featureRef, { durationMs: 420 });
+            }}
           />
           <SpotlightButton
             label="Clear card"
-            onPress={() => spotlight.highlight(clearRef, { durationMs: 420 })}
+            onPress={() => {
+              setActiveKey('clear');
+              spotlight.highlight(clearRef, { durationMs: 420 });
+            }}
           />
         </View>
         <SpotlightButton
@@ -49,7 +80,21 @@ export function ManualScreen() {
         controls={spotlight}
         {...spotlightProps}
         onBackdropPress={spotlight.clear}
-      />
+      >
+        <SpotlightTooltip controls={spotlight}>
+          <View style={styles.tooltip}>
+            <Text style={styles.tooltipTitle}>
+              {TOOLTIP_COPY[activeKey].title}
+            </Text>
+            <Text style={styles.tooltipCopy}>
+              {TOOLTIP_COPY[activeKey].copy}
+            </Text>
+            <View style={styles.tooltipActions}>
+              <SpotlightButton label="Got it" onPress={spotlight.clear} />
+            </View>
+          </View>
+        </SpotlightTooltip>
+      </Spotlight>
     </ScreenShell>
   );
 }
