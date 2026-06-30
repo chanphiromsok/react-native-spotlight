@@ -433,11 +433,16 @@ internal class SpotlightOverlayView(
       currentLocalPx.bottom + pad,
     )
 
-    if (shape == "circle") {
-      holePath.addOval(cutRect, Path.Direction.CW)
+    // Use addRoundRect for both shapes so the path structure stays identical
+    // (same element count/types) — allowing smooth ValueAnimator morphing between
+    // rect and circle within the same tour. addOval produces a different internal
+    // path structure and would cause an instant snap instead of a morph.
+    val holeRadius = if (shape == "circle") {
+      minOf(cutRect.width(), cutRect.height()) / 2f
     } else {
-      holePath.addRoundRect(cutRect, radius, radius, Path.Direction.CW)
+      radius
     }
+    holePath.addRoundRect(cutRect, holeRadius, holeRadius, Path.Direction.CW)
 
     // Use the pre-built outer rect (physical screen bounds in local coords).
     // See refreshGeometryCache() for why we use screen bounds instead of

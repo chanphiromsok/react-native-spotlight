@@ -229,7 +229,12 @@ public final class SpotlightView: UIView {
     let cutRect = local.insetBy(dx: -padding, dy: -padding)
     switch shape {
     case .circle:
-      return UIBezierPath(ovalIn: cutRect)
+      // Use roundedRect with max corner radius instead of ovalIn so iOS
+      // CABasicAnimation can interpolate between rect and circle paths —
+      // both use the same element structure (moveTo + 4×lineTo+curveTo + close).
+      // ovalIn uses a different element count and snaps instead of morphing.
+      let radius = min(cutRect.width, cutRect.height) / 2
+      return UIBezierPath(roundedRect: cutRect, cornerRadius: radius)
     case .rect:
       return UIBezierPath(
         roundedRect: cutRect,
