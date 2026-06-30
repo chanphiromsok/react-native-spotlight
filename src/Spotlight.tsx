@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { callback } from 'react-native-nitro-modules';
 import type { Rect } from './Spotlight.nitro';
@@ -92,21 +92,25 @@ export function Spotlight({
   children,
   style,
 }: SpotlightComponentProps) {
-  const [spotlightInstance, setSpotlightInstance] =
-    useState<SpotlightRef | null>(null);
-
   // Stable refs so callback() wrappers below never change identity on re-render.
   const onTargetLayoutRef = useRef(onTargetLayout);
   const onBackdropPressRef = useRef(onBackdropPress);
   const controlsRef = useRef(controls);
+  const spotlightRefRef = useRef(spotlightRef);
   useEffect(() => {
     onTargetLayoutRef.current = onTargetLayout;
     onBackdropPressRef.current = onBackdropPress;
     controlsRef.current = controls;
+    spotlightRefRef.current = spotlightRef;
   });
 
+  // Holds the SpotlightRef without triggering a re-render when it changes.
+  const spotlightInstanceRef = useRef<SpotlightRef | null>(null);
+
   const hybridRef = useCallback((ref: SpotlightRef | null) => {
-    setSpotlightInstance(ref);
+    spotlightInstanceRef.current = ref;
+    const targetRef = controlsRef.current?._ref ?? spotlightRefRef.current;
+    if (targetRef) targetRef.current = ref;
   }, []);
 
   const handleTargetLayout = useCallback((rect: Rect) => {
@@ -118,16 +122,15 @@ export function Spotlight({
     onBackdropPressRef.current?.();
   }, []);
 
+  // Re-wire the stored instance when the controls/spotlightRef prop changes.
   useEffect(() => {
     const targetRef = controls?._ref ?? spotlightRef;
     if (!targetRef) return;
-    if (spotlightInstance) {
-      targetRef.current = spotlightInstance;
-    }
+    targetRef.current = spotlightInstanceRef.current;
     return () => {
       targetRef.current = null;
     };
-  }, [controls, spotlightInstance, spotlightRef]);
+  }, [controls, spotlightRef]);
 
   return (
     <View style={[styles.overlay, style]} pointerEvents="box-none">
@@ -156,6 +159,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 2147483647,
-    elevation: 10000,
   },
 });

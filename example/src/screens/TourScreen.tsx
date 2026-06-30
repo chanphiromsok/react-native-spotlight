@@ -62,7 +62,7 @@ export function TourScreen() {
         {...spotlightProps}
         allowOverlayClick
       >
-        {tour.currentStep && (
+        {tour.currentStep ? (
           <SpotlightTooltip controls={tour.spotlight}>
             <View style={styles.tooltip}>
               <Text style={styles.tooltipStep}>
@@ -87,7 +87,7 @@ export function TourScreen() {
               </View>
             </View>
           </SpotlightTooltip>
-        )}
+        ) : null}
       </Spotlight>
     </ScreenShell>
   );

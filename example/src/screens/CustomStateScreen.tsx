@@ -52,7 +52,7 @@ export function CustomStateScreen() {
   useEffect(() => {
     if (stepId) targets.highlightById(stepId, { durationMs: 380 });
     else spotlight.clear();
-  }, [stepId]);
+  }, [stepId, targets.highlightById, spotlight.clear]);
 
   const start = () => setStepId(STEPS[0].id);
   const next = () => {
@@ -114,7 +114,7 @@ export function CustomStateScreen() {
         {...spotlightProps}
         onBackdropPress={stop}
       >
-        {currentStep && (
+        {currentStep ? (
           <SpotlightTooltip controls={spotlight}>
             <View style={styles.tooltip}>
               <Text style={styles.tooltipStep}>
@@ -137,7 +137,7 @@ export function CustomStateScreen() {
               </View>
             </View>
           </SpotlightTooltip>
-        )}
+        ) : null}
       </Spotlight>
     </ScreenShell>
   );
