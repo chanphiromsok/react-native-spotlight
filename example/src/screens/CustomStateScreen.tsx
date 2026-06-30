@@ -3,10 +3,10 @@ import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { Text, View } from 'react-native';
 import {
   Spotlight,
-  SpotlightTooltip,
   useSpotlight,
   useSpotlightTargets,
 } from 'react-native-nitro-spotlight';
+import { TooltipCard } from '../components/TooltipCard';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
 import { spotlightProps, styles } from '../theme/styles';
@@ -114,8 +114,8 @@ export function CustomStateScreen() {
         {...spotlightProps}
         onBackdropPress={stop}
       >
-        {currentStep ? (
-          <SpotlightTooltip controls={spotlight}>
+        {currentStep && spotlight.targetRect ? (
+          <TooltipCard targetRect={spotlight.targetRect}>
             <View style={styles.tooltip}>
               <Text style={styles.tooltipStep}>
                 {currentIndex + 1} / {STEPS.length}
@@ -136,7 +136,7 @@ export function CustomStateScreen() {
                 />
               </View>
             </View>
-          </SpotlightTooltip>
+          </TooltipCard>
         ) : null}
       </Spotlight>
     </ScreenShell>

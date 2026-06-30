@@ -2,9 +2,9 @@ import { useRef, type ElementRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   Spotlight,
-  SpotlightTooltip,
   useSpotlightTour,
 } from 'react-native-nitro-spotlight';
+import { TooltipCard } from '../components/TooltipCard';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
 import { styles } from '../theme/styles';
@@ -88,8 +88,8 @@ export function ShapeScreen() {
         borderColor="#8FB7FF"
         allowOverlayClick
       >
-        {tour.currentStep ? (
-          <SpotlightTooltip controls={tour.spotlight}>
+        {tour.currentStep && tour.spotlight.targetRect ? (
+          <TooltipCard targetRect={tour.spotlight.targetRect}>
             <View style={styles.tooltip}>
               <Text style={styles.tooltipStep}>
                 {tour.currentIndex + 1} / {CIRCLE_STEPS.length}
@@ -112,7 +112,7 @@ export function ShapeScreen() {
                 />
               </View>
             </View>
-          </SpotlightTooltip>
+          </TooltipCard>
         ) : null}
       </Spotlight>
     </ScreenShell>

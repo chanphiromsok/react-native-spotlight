@@ -3,11 +3,6 @@ export { Spotlight } from './Spotlight';
 export type { SpotlightComponentProps, SpotlightShape } from './Spotlight';
 export { useSpotlight } from './useSpotlight';
 export type { SpotlightControls, HighlightOptions } from './useSpotlight';
-export { SpotlightTooltip } from './SpotlightTooltip';
-export type {
-  SpotlightTooltipProps,
-  SpotlightTooltipPlacement,
-} from './SpotlightTooltip';
 export { useSpotlightTargets } from './useSpotlightTargets';
 export type {
   SpotlightTargets,

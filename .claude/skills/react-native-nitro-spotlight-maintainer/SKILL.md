@@ -17,7 +17,6 @@ Public JS/TS API:
 
 - `src/index.tsx`
 - `src/Spotlight.tsx`
-- `src/SpotlightTooltip.tsx`
 - `src/useSpotlight.ts`
 - `src/useSpotlightTargets.ts`
 - `src/useSpotlightTour.ts`
@@ -75,14 +74,9 @@ const tour = useSpotlightTour({ steps });
 <Spotlight controls={tour.spotlight} />
 ```
 
-## SpotlightTooltip
+## Tooltip positioning
 
-`SpotlightTooltip` is a pure JS component (`src/SpotlightTooltip.tsx`). It:
-
-- Reads `controls.targetRect` (set via `_onTargetLayout` → `onTargetLayout` native callback → `windowDpToLocalDip`)
-- Positions itself above or below the cutout using `placement` logic
-- Is invisible when `targetRect` is null (no active highlight)
-- Must be a child of `<Spotlight>` so it composites above the native dim layer in z-order
+There is no built-in tooltip component. Users read `controls.targetRect` (set via `_onTargetLayout` → `onTargetLayout` native callback → `windowDpToLocalDip`) to position their own tooltip as a child of `<Spotlight>`.
 
 When debugging tooltip positioning:
 - On Android edge-to-edge (Android 15+), `targetRect` coordinates are in overlay-local DIP — verify `windowDpToLocalDip()` is being called in `HybridSpotlightView.highlight()` and `highlightAnimated()`.
@@ -150,7 +144,7 @@ On Android 15+, edge-to-edge is mandatory — the app window starts at physical 
 2. Subtracting the overlay's own screen origin (via `getLocationOnScreen`)
 3. Dividing back to DIP
 
-`HybridSpotlightView` calls `windowDpToLocalDip()` before firing `onTargetLayout`, so `SpotlightTooltip` always receives rect coordinates in the overlay's local DIP space, regardless of windowing mode.
+`HybridSpotlightView` calls `windowDpToLocalDip()` before firing `onTargetLayout`, so user tooltip components always receive rect coordinates in the overlay's local DIP space via `controls.targetRect`, regardless of windowing mode.
 
 ### Drawing
 

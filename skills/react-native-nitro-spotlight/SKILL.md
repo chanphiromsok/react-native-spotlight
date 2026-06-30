@@ -212,12 +212,40 @@ export function TourExample() {
 
 ## Add a tooltip to the spotlight
 
-`SpotlightTooltip` renders tooltip content above the dim overlay. Place it as a child of `<Spotlight>` — it sits above the native dim layer automatically. Handle dismiss on `<Spotlight onBackdropPress={...}>`, not on the tooltip.
-
-`SpotlightTooltip` is invisible when no highlight is active. Bring your own design for the tooltip card.
+There is no built-in tooltip component. Read `controls.targetRect` to position your own tooltip as a child of `<Spotlight>` — children sit above the native dim layer automatically.
 
 ```tsx
-import { Spotlight, SpotlightTooltip, useSpotlight } from 'react-native-nitro-spotlight';
+import { Spotlight, useSpotlight, type Rect } from 'react-native-nitro-spotlight';
+import { useWindowDimensions, View, Text, Pressable, StyleSheet, Button } from 'react-native';
+
+function MyTooltip({ targetRect, onDismiss }: { targetRect: Rect; onDismiss: () => void }) {
+  const { width, height } = useWindowDimensions();
+  const gap = 12;
+  const margin = 16;
+  const maxWidth = width - margin * 2;
+  const left = Math.max(margin, Math.min(
+    targetRect.x + targetRect.width / 2 - maxWidth / 2,
+    width - maxWidth - margin
+  ));
+  const placeBelow = height - (targetRect.y + targetRect.height) >= targetRect.y;
+
+  return (
+    <View
+      style={[
+        { position: 'absolute', maxWidth },
+        placeBelow
+          ? { top: targetRect.y + targetRect.height + gap, left }
+          : { bottom: height - targetRect.y + gap, left },
+      ]}
+      pointerEvents="box-none"
+    >
+      <Pressable style={{ padding: 16, backgroundColor: '#1B2440', borderRadius: 12 }}>
+        <Text style={{ color: '#fff', marginBottom: 8 }}>Here's a tip!</Text>
+        <Button title="Got it" onPress={onDismiss} />
+      </Pressable>
+    </View>
+  );
+}
 
 function Example() {
   const spotlight = useSpotlight();
@@ -225,33 +253,22 @@ function Example() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View ref={cardRef}>
-        <Text>Target</Text>
-      </View>
-
+      <View ref={cardRef}><Text>Target</Text></View>
       <Button onPress={() => spotlight.highlight(cardRef, { durationMs: 400 })} title="Show" />
 
       <Spotlight controls={spotlight} dimOpacity={0.68} borderRadius={20} padding={8} onBackdropPress={spotlight.clear}>
-        <SpotlightTooltip controls={spotlight}>
-          <View style={{ padding: 16, backgroundColor: '#fff', borderRadius: 12 }}>
-            <Text>Here's a tip!</Text>
-            <Button title="Got it" onPress={spotlight.clear} />
-          </View>
-        </SpotlightTooltip>
+        {spotlight.targetRect && (
+          <MyTooltip targetRect={spotlight.targetRect} onDismiss={spotlight.clear} />
+        )}
       </Spotlight>
     </View>
   );
 }
 ```
 
-Key props:
+For tour steps, gate on `tour.currentStep && tour.spotlight.targetRect` and pass `targetRect={tour.spotlight.targetRect}`.
 
-- `controls` — controls from `useSpotlight()` or `tour.spotlight`.
-- `placement` — `'above'`, `'below'`, or `'auto'` (default). `'auto'` picks whichever side has more space.
-- `gap` — pixels between the cutout edge and the tooltip (default `12`).
-- `style` — applied to the tooltip container; use for background, border radius, shadow.
-
-For multi-step tours, use `<SpotlightTooltip controls={tour.spotlight} />`.
+To animate, wrap in a Reanimated `Animated.View` with `entering`/`exiting` and use a `key` derived from rect coordinates so `entering` retriggers on each step change.
 
 ## Bring your own state
 

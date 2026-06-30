@@ -230,6 +230,90 @@ How it works:
 
 If you do not need full-screen coverage or preloading, render `<Spotlight controls={spotlight} />` directly in the screen instead.
 
+## Building a tooltip
+
+`Spotlight` has no built-in tooltip component — bring your own. Read `controls.targetRect` to position it. Render it as a child of `<Spotlight>` so it naturally composites above the native dim layer.
+
+```tsx
+import { useRef, type ComponentRef } from 'react';
+import { Pressable, StyleSheet, useWindowDimensions, View, Text, Button } from 'react-native';
+import { Spotlight, useSpotlight, type Rect } from 'react-native-nitro-spotlight';
+
+// Minimal positioned tooltip — drop this into your own component
+function MyTooltip({ targetRect, onDismiss }: { targetRect: Rect; onDismiss: () => void }) {
+  const { width, height } = useWindowDimensions();
+  const gap = 12;
+  const margin = 16;
+  const maxWidth = width - margin * 2;
+  const left = Math.max(margin, Math.min(
+    targetRect.x + targetRect.width / 2 - maxWidth / 2,
+    width - maxWidth - margin
+  ));
+  const placeBelow = height - (targetRect.y + targetRect.height) >= targetRect.y;
+
+  return (
+    <View
+      style={[
+        styles.tooltip,
+        placeBelow
+          ? { top: targetRect.y + targetRect.height + gap, left, maxWidth }
+          : { bottom: height - targetRect.y + gap, left, maxWidth },
+      ]}
+      pointerEvents="box-none"
+    >
+      <Pressable style={styles.card}>
+        <Text style={styles.tip}>Here's a tip!</Text>
+        <Button title="Got it" onPress={onDismiss} />
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  tooltip: { position: 'absolute' },
+  card: { padding: 16, backgroundColor: '#1B2440', borderRadius: 12 },
+  tip: { color: '#fff', marginBottom: 8 },
+});
+
+// Usage
+function Example() {
+  const spotlight = useSpotlight();
+  const cardRef = useRef<ComponentRef<typeof View>>(null);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View ref={cardRef}><Text>Target</Text></View>
+      <Button onPress={() => spotlight.highlight(cardRef)} title="Show" />
+
+      <Spotlight controls={spotlight} onBackdropPress={spotlight.clear}>
+        {spotlight.targetRect && (
+          <MyTooltip targetRect={spotlight.targetRect} onDismiss={spotlight.clear} />
+        )}
+      </Spotlight>
+    </View>
+  );
+}
+```
+
+**To add animation** — wrap in a Reanimated `Animated.View` with `entering`/`exiting`, or drive a `useRef(new Animated.Value(0))` from a `useEffect` that watches `targetRect`. Use a `key` derived from the rect coordinates to re-trigger `entering` on each tour step change:
+
+```tsx
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+
+// inside <Spotlight>:
+{spotlight.targetRect && (
+  <Animated.View
+    key={`${spotlight.targetRect.x}-${spotlight.targetRect.y}`}
+    entering={FadeIn.delay(180).duration(150)}
+    exiting={FadeOut.duration(100)}
+  >
+    <MyTooltip targetRect={spotlight.targetRect} onDismiss={spotlight.clear} />
+  </Animated.View>
+)}
+```
+
+The `delay(180)` lets the cutout animation travel most of the way before the tooltip appears. Tune it to match your `durationMs` on `highlight()`.
+
 ## Product tour mode 🧭
 
 Use `useSpotlightTour()` when you want a real walkthrough.
@@ -478,7 +562,7 @@ const spotlight = useSpotlight();
 | --- | --- | --- |
 | `highlight` | `(viewRef, options?) => void` | Measures a view ref and animates the cutout to it. |
 | `clear` | `() => void` | Hides the overlay. |
-| `targetRect` | `Rect \| null` | Current cutout rect in overlay-local coordinates. `null` when hidden. Used by `SpotlightTooltip` for positioning. |
+| `targetRect` | `Rect \| null` | Current cutout rect in overlay-local coordinates. `null` when hidden. Use this to position your own tooltip above the dim layer. |
 | `_ref` | `RefObject` | Internal native ref. Use `<Spotlight controls={spotlight} />` instead of touching this directly. |
 
 ### `highlight(viewRef, options?)`
@@ -534,149 +618,6 @@ type SpotlightTourStep = {
   durationMs?: number;
 };
 ```
-
-### `<SpotlightTooltip />`
-
-Renders styled tooltip content above the dim overlay. Place it as a child of `<Spotlight>` — it appears above the native dim layer automatically.
-
-Visible only when `controls.targetRect` is non-null (i.e. a highlight is active). Handle backdrop taps on `<Spotlight onBackdropPress={...}>`, not on the tooltip.
-
-```tsx
-import { Spotlight, SpotlightTooltip, useSpotlight } from 'react-native-nitro-spotlight';
-
-function Example() {
-  const spotlight = useSpotlight();
-  const cardRef = useRef<ComponentRef<typeof View>>(null);
-
-  return (
-    <View style={{ flex: 1 }}>
-      <View ref={cardRef}>
-        <Text>Target</Text>
-      </View>
-
-      <Button onPress={() => spotlight.highlight(cardRef)} title="Show" />
-
-      <Spotlight controls={spotlight} onBackdropPress={spotlight.clear}>
-        <SpotlightTooltip controls={spotlight}>
-          <View style={{ padding: 16, backgroundColor: '#fff', borderRadius: 12 }}>
-            <Text>Here's a tip!</Text>
-            <Button title="Got it" onPress={spotlight.clear} />
-          </View>
-        </SpotlightTooltip>
-      </Spotlight>
-    </View>
-  );
-}
-```
-
-| Prop | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `controls` | `SpotlightControls` | required | Controls from `useSpotlight()` or `tour.spotlight`. |
-| `children` | `ReactNode` | required | Tooltip content — fully unstyled, bring your own design. |
-| `placement` | `'above' \| 'below' \| 'auto'` | `'auto'` | Where to place the tooltip relative to the cutout. `'auto'` picks whichever side has more space. |
-| `gap` | `number` | `12` | Gap in pixels between the cutout edge and the tooltip. |
-| `style` | `ViewStyle` | — | Style applied to the tooltip container. Use for background, border radius, shadow, etc. |
-
-### Animating the tooltip
-
-`SpotlightTooltip` positions itself but does not animate — it has no opinion on fade, spring, or slide. Add your own animation by wrapping it. Two common patterns:
-
-#### With Reanimated
-
-Use `entering`/`exiting` presets on an `Animated.View` wrapper. Gate on `targetRect` so the wrapper mounts and unmounts with the highlight. Use a `key` derived from the rect to force a remount — and therefore re-trigger `entering` — on each tour step transition.
-
-```tsx
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Spotlight, SpotlightTooltip, useSpotlight } from 'react-native-nitro-spotlight';
-
-function Example() {
-  const spotlight = useSpotlight();
-  const cardRef = useRef<ComponentRef<typeof View>>(null);
-
-  // Key changes on every new rect — remounts the Animated.View so FadeIn
-  // retriggles on each tour step instead of only on the first highlight.
-  const rectKey = spotlight.targetRect
-    ? `${spotlight.targetRect.x}-${spotlight.targetRect.y}`
-    : 'hidden';
-
-  return (
-    <View style={{ flex: 1 }}>
-      <View ref={cardRef}><Text>Target</Text></View>
-      <Button onPress={() => spotlight.highlight(cardRef)} title="Show" />
-
-      <Spotlight controls={spotlight} onBackdropPress={spotlight.clear}>
-        {spotlight.targetRect && (
-          <Animated.View
-            key={rectKey}
-            entering={FadeIn.delay(180).duration(150)}
-            exiting={FadeOut.duration(100)}
-          >
-            <SpotlightTooltip controls={spotlight}>
-              <View style={{ padding: 16, backgroundColor: '#fff', borderRadius: 12 }}>
-                <Text>Here's a tip!</Text>
-                <Button title="Got it" onPress={spotlight.clear} />
-              </View>
-            </SpotlightTooltip>
-          </Animated.View>
-        )}
-      </Spotlight>
-    </View>
-  );
-}
-```
-
-The `delay(180)` lets the 300 ms cutout animation travel most of the way before the tooltip appears. Tune it to match your `durationMs` on `highlight()`.
-
-#### With React Native's `Animated`
-
-No extra library needed — track `targetRect` in a `useEffect` and drive an opacity value manually.
-
-```tsx
-import { useEffect, useRef } from 'react';
-import { Animated, View, Text, Button } from 'react-native';
-import { Spotlight, SpotlightTooltip, useSpotlight } from 'react-native-nitro-spotlight';
-
-function Example() {
-  const spotlight = useSpotlight();
-  const cardRef = useRef<ComponentRef<typeof View>>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!spotlight.targetRect) {
-      // Clear: fade out immediately
-      Animated.timing(opacity, { toValue: 0, duration: 100, useNativeDriver: true }).start();
-      return;
-    }
-    // Appear: wait for the cutout to travel, then fade in
-    const timer = setTimeout(() => {
-      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-    }, 180);
-    return () => clearTimeout(timer);
-  }, [spotlight.targetRect, opacity]);
-
-  return (
-    <View style={{ flex: 1 }}>
-      <View ref={cardRef}><Text>Target</Text></View>
-      <Button onPress={() => spotlight.highlight(cardRef)} title="Show" />
-
-      <Spotlight controls={spotlight} onBackdropPress={spotlight.clear}>
-        <Animated.View style={{ opacity }}>
-          <SpotlightTooltip controls={spotlight}>
-            <View style={{ padding: 16, backgroundColor: '#fff', borderRadius: 12 }}>
-              <Text>Here's a tip!</Text>
-              <Button title="Got it" onPress={spotlight.clear} />
-            </View>
-          </SpotlightTooltip>
-        </Animated.View>
-      </Spotlight>
-    </View>
-  );
-}
-```
-
-> **Tip:** `SpotlightTooltip` returns `null` when `targetRect` is null, so the `Animated.View` collapses. On the fade-out path, the tooltip disappears before opacity reaches zero. If you need the fade-out to play fully, hold the previous rect yourself and clear only after the animation finishes.
-
----
 
 ### `useSpotlightTargets(spotlight)`
 

@@ -2,9 +2,9 @@ import { useRef, type ElementRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   Spotlight,
-  SpotlightTooltip,
   useSpotlight,
 } from 'react-native-nitro-spotlight';
+import { TooltipCard } from '../components/TooltipCard';
 import { Portal } from 'react-native-teleport';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
@@ -42,18 +42,20 @@ export function TeleportScreen() {
             {...spotlightProps}
             onBackdropPress={spotlight.clear}
           >
-            <SpotlightTooltip controls={spotlight}>
-              <View style={styles.tooltip}>
-                <Text style={styles.tooltipTitle}>Teleported tooltip</Text>
-                <Text style={styles.tooltipCopy}>
-                  This tooltip and overlay were teleported here from an
-                  offscreen Portal via react-native-teleport.
-                </Text>
-                <View style={styles.tooltipActions}>
-                  <SpotlightButton label="Got it" onPress={spotlight.clear} />
+            {spotlight.targetRect ? (
+              <TooltipCard targetRect={spotlight.targetRect}>
+                <View style={styles.tooltip}>
+                  <Text style={styles.tooltipTitle}>Teleported tooltip</Text>
+                  <Text style={styles.tooltipCopy}>
+                    This tooltip and overlay were teleported here from an
+                    offscreen Portal via react-native-teleport.
+                  </Text>
+                  <View style={styles.tooltipActions}>
+                    <SpotlightButton label="Got it" onPress={spotlight.clear} />
+                  </View>
                 </View>
-              </View>
-            </SpotlightTooltip>
+              </TooltipCard>
+            ) : null}
           </Spotlight>
         </Portal>
       </View>

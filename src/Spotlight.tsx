@@ -51,7 +51,7 @@ export interface SpotlightComponentProps {
   onTargetLayout?: (rect: Rect) => void;
 
   /**
-   * Content rendered above the dim overlay (e.g. SpotlightTooltip).
+   * Content rendered above the dim overlay (e.g. a custom tooltip).
    * Children are siblings of SpotlightView in the React tree, so they
    * composite above the dim layer at higher z-order automatically.
    */
@@ -67,7 +67,7 @@ export interface SpotlightComponentProps {
  * Full-screen overlay that highlights a measured view with a native cutout.
  * Pair with useSpotlight() to drive it.
  *
- * Place children (e.g. SpotlightTooltip) inside to render them above the dim
+ * Place children (e.g. a custom tooltip) inside to render them above the dim
  * layer without any extra z-index or hole-punching. Works as a regular React
  * Native view — can be wrapped in any portal library (e.g. react-native-teleport)
  * to render from anywhere in the component tree.
@@ -80,9 +80,11 @@ export interface SpotlightComponentProps {
  *   <View style={{ flex: 1 }}>
  *     <YourContent />
  *     <Spotlight controls={spotlight} onBackdropPress={spotlight.clear}>
- *       <SpotlightTooltip controls={spotlight}>
- *         <Text>Here's a tip!</Text>
- *       </SpotlightTooltip>
+ *       {spotlight.targetRect && (
+ *         <MyTooltip targetRect={spotlight.targetRect}>
+ *           <Text>Here's a tip!</Text>
+ *         </MyTooltip>
+ *       )}
  *     </Spotlight>
  *   </View>
  * )

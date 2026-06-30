@@ -3,9 +3,9 @@ import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { Text, View } from 'react-native';
 import {
   Spotlight,
-  SpotlightTooltip,
   useSpotlightTour,
 } from 'react-native-nitro-spotlight';
+import { TooltipCard } from '../components/TooltipCard';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
 import { TourTargets } from '../components/TourTargets';
@@ -62,8 +62,8 @@ export function TourScreen() {
         {...spotlightProps}
         allowOverlayClick
       >
-        {tour.currentStep ? (
-          <SpotlightTooltip controls={tour.spotlight}>
+        {tour.currentStep && tour.spotlight.targetRect ? (
+          <TooltipCard targetRect={tour.spotlight.targetRect}>
             <View style={styles.tooltip}>
               <Text style={styles.tooltipStep}>
                 {tour.currentIndex + 1} / {tour.steps.length}
@@ -86,7 +86,7 @@ export function TourScreen() {
                 />
               </View>
             </View>
-          </SpotlightTooltip>
+          </TooltipCard>
         ) : null}
       </Spotlight>
     </ScreenShell>

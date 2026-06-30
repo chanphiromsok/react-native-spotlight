@@ -2,9 +2,9 @@ import { useRef, type ElementRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   Spotlight,
-  SpotlightTooltip,
   useSpotlight,
 } from 'react-native-nitro-spotlight';
+import { TooltipCard } from '../components/TooltipCard';
 import { FullWindowOverlay } from 'react-native-screens';
 import { ScreenShell } from '../components/ScreenShell';
 import { SpotlightButton } from '../components/SpotlightButton';
@@ -46,18 +46,20 @@ export function FullWindowScreen() {
           {...spotlightProps}
           onBackdropPress={spotlight.clear}
         >
-          <SpotlightTooltip controls={spotlight}>
-            <View style={styles.tooltip}>
-              <Text style={styles.tooltipTitle}>Full window</Text>
-              <Text style={styles.tooltipCopy}>
-                The overlay and tooltip sit above the navigation bar via
-                FullWindowOverlay — no extra portal setup required.
-              </Text>
-              <View style={styles.tooltipActions}>
-                <SpotlightButton label="Got it" onPress={spotlight.clear} />
+          {spotlight.targetRect ? (
+            <TooltipCard targetRect={spotlight.targetRect}>
+              <View style={styles.tooltip}>
+                <Text style={styles.tooltipTitle}>Full window</Text>
+                <Text style={styles.tooltipCopy}>
+                  The overlay and tooltip sit above the navigation bar via
+                  FullWindowOverlay — no extra portal setup required.
+                </Text>
+                <View style={styles.tooltipActions}>
+                  <SpotlightButton label="Got it" onPress={spotlight.clear} />
+                </View>
               </View>
-            </View>
-          </SpotlightTooltip>
+            </TooltipCard>
+          ) : null}
         </Spotlight>
       </FullWindowOverlay>
     </ScreenShell>
