@@ -41,6 +41,18 @@ class HybridSpotlightView(
   private var headerDimRetryPosted = false
   private var decorView: ViewGroup? = null
 
+  init {
+    // Clean up headerDimView when the spotlight overlay detaches from its
+    // window (unmount without recycle). prepareForRecycle() handles the pool
+    // case; this listener covers destruction / direct unmount.
+    spotlightView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+      override fun onViewAttachedToWindow(v: View) {}
+      override fun onViewDetachedFromWindow(v: View) {
+        hideHeaderDim()
+      }
+    })
+  }
+
   // -------------------------------------------------------------------------
   // Property backing fields
   // -------------------------------------------------------------------------

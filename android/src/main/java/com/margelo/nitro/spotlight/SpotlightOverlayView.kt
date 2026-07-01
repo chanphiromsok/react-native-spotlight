@@ -154,6 +154,12 @@ internal class SpotlightOverlayView(
   // not at cachedVisibleFrame.top.
   private var cachedIsDialogWindow = false
 
+  // The Y reference used to convert measureInWindow DIP coordinates back to
+  // screen pixels. Equals the Y offset that RN subtracted from the target
+  // view's screen position when computing measureInWindow. Cached once per
+  // highlight in refreshGeometryCache() — see windowDpToLocalPx().
+  private var cachedRefY: Float = 0f
+
   // -------------------------------------------------------------------------
   // Init
   // -------------------------------------------------------------------------
@@ -391,21 +397,10 @@ internal class SpotlightOverlayView(
   private fun windowDpToLocalPx(windowDp: RectF): RectF = traceSection(TRACE_WINDOW_TO_LOCAL) {
     if (windowDp.isEmpty) return@traceSection RectF()
 
-    // RN measureInWindow returns DIP relative to the React root view's screen
-    // position. In the main activity the React root is at visibleFrame.top
-    // (status-bar height), so refY = visibleFrame.top recovers screen pixels.
-    // In a dialog/sheet window the React root coincides with the overlay itself
-    // (absoluteFillObject inside the sheet content), so refY = overlayOrigin[1].
-    val refY = if (cachedIsDialogWindow) {
-      cachedOverlayOrigin[1].toFloat()
-    } else {
-      cachedVisibleFrame.top.toFloat()
-    }
-
     val screenLeft = windowDp.left * cachedDensity + cachedVisibleFrame.left
-    val screenTop = windowDp.top * cachedDensity + refY
+    val screenTop = windowDp.top * cachedDensity + cachedRefY
     val screenRight = windowDp.right * cachedDensity + cachedVisibleFrame.left
-    val screenBottom = windowDp.bottom * cachedDensity + refY
+    val screenBottom = windowDp.bottom * cachedDensity + cachedRefY
 
     RectF(
       screenLeft - cachedOverlayOrigin[0],
@@ -435,6 +430,28 @@ internal class SpotlightOverlayView(
         ?: return@run false
       val myToken = windowToken ?: return@run false
       myToken != actToken
+    }
+
+    // Compute the Y reference for windowDpToLocalPx():
+    //   • Main activity window: React root is at visibleFrame.top.
+    //   • Bottom-sheet / dialog with the overlay INSIDE the dialog:
+    //       overlay origin > 0 (the dialog sits partway down the screen) and
+    //       measureInWindow uses the dialog's own React root, which sits at
+    //       cachedOverlayOrigin[1]. Use that as refY.
+    //   • FullWindowOverlay (react-native-screens) and similar full-screen
+    //       foreign windows: the overlay is at physical y=0 (cachedOverlayOrigin[1]
+    //       == 0) but the targets are still measured by the MAIN window's React
+    //       root. Using origin[1] == 0 as refY misses the status-bar offset.
+    //       Read the main activity's visible frame top instead.
+    cachedRefY = when {
+      !cachedIsDialogWindow -> cachedVisibleFrame.top.toFloat()
+      cachedOverlayOrigin[1] > 0 -> cachedOverlayOrigin[1].toFloat()
+      else -> {
+        val frame = Rect()
+        (context as? ThemedReactContext)?.currentActivity?.window?.decorView
+          ?.getWindowVisibleDisplayFrame(frame)
+        frame.top.toFloat()
+      }
     }
 
     // Pre-build the outer EVEN_ODD rect in local coordinates. This rect
